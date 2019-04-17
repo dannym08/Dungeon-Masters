@@ -7,10 +7,10 @@ title:  Team
 
 
 ## USER 1
-***UCI Net ID***: ucinetid1
+***UCI Net ID***: dmardiro
 
 ## USER 2
-***UCI Net ID***: ucinetid2
+***UCI Net ID***: thamaj
 
 ## USER 3
-***UCI Net ID***: ucinetid3
+***UCI Net ID***: jimic
