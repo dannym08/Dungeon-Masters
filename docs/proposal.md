@@ -1,3 +1,8 @@
+---
+layout: default
+title:  Proposal
+---
+
 # Summary
 ----------
 Our goal in this project is to create an agent that will train to solve a dungeon. These dungeons will be represented by rooms, which will be basic at first, with an exit and entrance. As we make progress we will add complexity such as: 
