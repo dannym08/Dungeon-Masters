@@ -1,7 +1,3 @@
----
-layout: default
-title: Proposal
----
 # Summary
 ----------
 Our project will train an agent to solve a dungeon. These rooms will be basic at first, with an exit and entrance. As we make progress we will add complexity such as: enemies, weapons the agent can use, food the agent can eat, armor the agent can wear. Once that is all added we want to make the exit a ladder up to another floor that is bigger and more difficult, but offers a greater reward. Input would be a dungeon map. Output would be a score that is described in more detail in the evaluation plan. Other applications for this project can be for other dungeon crawler game. It could also work in the real world. If we set a tiny wheeled robot in a room, this project could be used to help map and move the robot around.
