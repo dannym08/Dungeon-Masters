@@ -1,6 +1,15 @@
 # Summary
 ----------
-Our project will train an agent to solve a dungeon. These rooms will be basic at first, with an exit and entrance. As we make progress we will add complexity such as: enemies, weapons the agent can use, food the agent can eat, armor the agent can wear. Once that is all added we want to make the exit a ladder up to another floor that is bigger and more difficult, but offers a greater reward. Input would be a dungeon map. Output would be a score that is described in more detail in the evaluation plan. Other applications for this project can be for other dungeon crawler game. It could also work in the real world. If we set a tiny wheeled robot in a room, this project could be used to help map and move the robot around.
+Our goal in this project is to create an agent that will train to solve a dungeon. These dungeons will be represented by rooms, which will be basic at first, with an exit and entrance. As we make progress we will add complexity such as: 
+- enemies that the agent must avoid or destroy
+- weapons that the agent can use
+- food that the agent can eat
+- armor that the agent can wear.
+Our dungeons will initially consist of one floor. We eventually want to add a third dimension to the dungeon by creating a ladder up to a higher floor that is bigger and more difficult but offers a greater reward. 
+
+The input will be a dungeon map represented in XML following the Malmo specifications. The output will be a calculated score that is described in more detail in the evaluation plan.
+
+This project’s agent may be applicable to other dungeon crawler games. It could theoretically work with physical agents in the real world: if we set a tiny wheeled robot in a room, this project could be used to help map its environment and move the robot around.
 
 # AI/ML Algorithm
 -----------------
