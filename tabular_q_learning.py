@@ -344,8 +344,8 @@ malmoutils.parse_command_line(agent_host)
 
 # -- set up the python-side drawing -- #
 scale = 40
-world_x = 6
-world_y = 14
+world_x = 18
+world_y = 16
 root = tk.Tk()
 root.wm_title("Q-table")
 canvas = tk.Canvas(root, width=world_x * scale, height=world_y * scale, borderwidth=0, highlightthickness=0, bg="black")
