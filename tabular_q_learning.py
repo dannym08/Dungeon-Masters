@@ -344,7 +344,7 @@ malmoutils.parse_command_line(agent_host)
 
 # -- set up the python-side drawing -- #
 scale = 40
-world_x = 18
+world_x = 19
 world_y = 16
 root = tk.Tk()
 root.wm_title("Q-table")
