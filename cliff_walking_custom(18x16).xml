@@ -24,7 +24,7 @@
         <!-- coordinates for cuboid are inclusive -->
           <DrawCuboid x1="-2" y1="46" z1="-2" x2="20" y2="50" z2="18" type="air" />            <!-- limits of our arena -->
           <DrawCuboid x1="-2" y1="45" z1="-2" x2="20" y2="45" z2="18" type="lava" />           <!-- lava floor -->
-          <DrawCuboid x1="0"  y1="45" z1="0"  x2="18" y2="45" z2="16" type="sandstone" />      <!-- floor of the arena -->
+          <DrawCuboid x1="0"  y1="45" z1="0"  x2="3" y2="45" z2="16" type="sandstone" />      <!-- floor of the arena -->
 		  
           <DrawBlock  x="4"   y="45"  z="1"  type="cobblestone" />                           <!-- the starting marker -->
 		  <!-- Boundary -->
@@ -35,10 +35,11 @@
 
           <DrawBlock   x="18"   y="45"  z="16" type="lapis_block" />                           <!-- the destination marker -->
           <DrawItem     x="18"   y="46"  z="16" type="diamond" />                               <!-- another destination marker -->
-          <DrawBlock   x="2"   y="45"  z="2"  type="red_sandstone" />
+          <!--<DrawBlock   x="2"   y="45"  z="2"  type="red_sandstone" />
           <DrawBlock   x="2"   y="45"  z="3"  type="red_sandstone" />
           <DrawBlock   x="2"   y="45"  z="1"  type="red_sandstone" />
-          <DrawBlock   x="1"   y="45"  z="2"  type="red_sandstone" />
+          <DrawBlock   x="1"   y="45"  z="2"  type="red_sandstone" />-->
+          <DrawCuboid  x1="2"  y1="45" z1="1"  x2="0"   y2="45" z2="3" type="red_sandstone" />
           <DrawEntity  x="2"   y="45"  z="2"  type="Villager" />    <!-- Enemy -->
       </DrawingDecorator>
       <ServerQuitFromTimeUp timeLimitMs="1000000"/>
