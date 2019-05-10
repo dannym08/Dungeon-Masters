@@ -24,7 +24,7 @@
         <!-- coordinates for cuboid are inclusive -->
           <DrawCuboid x1="-2" y1="46" z1="-2" x2="20" y2="50" z2="18" type="air" />            <!-- limits of our arena -->
           <DrawCuboid x1="-2" y1="45" z1="-2" x2="20" y2="45" z2="18" type="lava" />           <!-- lava floor -->
-          <DrawCuboid x1="0"  y1="45" z1="0"  x2="3" y2="45" z2="16" type="sandstone" />      <!-- floor of the arena -->
+          <DrawCuboid x1="-2"  y1="45" z1="0"  x2="20" y2="45" z2="16" type="sandstone" />      <!-- floor of the arena -->
 		  
           <DrawBlock  x="4"   y="45"  z="1"  type="cobblestone" />                           <!-- the starting marker -->
 		  <!-- Boundary -->
@@ -42,7 +42,7 @@
           <DrawCuboid  x1="2"  y1="45" z1="1"  x2="0"   y2="45" z2="3" type="red_sandstone" />
           <DrawEntity  x="2"   y="45"  z="2"  type="Villager" />    <!-- Enemy -->
       </DrawingDecorator>
-      <ServerQuitFromTimeUp timeLimitMs="1000000"/>
+      <ServerQuitFromTimeUp timeLimitMs="2000000"/>
       <ServerQuitWhenAnyAgentFinishes/>
     </ServerHandlers>
   </ServerSection>
