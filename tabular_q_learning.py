@@ -92,9 +92,11 @@ class TabQAgent(object):
 
     def act(self, world_state, agent_host, current_r):
         """take 1 action in response to the current world state"""
-
+        
         obs_text = world_state.observations[-1].text
         obs = json.loads(obs_text)  # most recent observation
+        print(obs)
+        print(current_r)
         self.logger.debug(obs)
         if not u'XPos' in obs or not u'ZPos' in obs:
             self.logger.error("Incomplete observation received: %s" % obs_text)
@@ -113,6 +115,24 @@ class TabQAgent(object):
 
         self.drawQ(curr_x=int(obs[u'XPos']), curr_y=int(obs[u'ZPos']))
 
+        #Special: if current_r is -76 (wall) then we go backwards
+        if current_r == -76:
+            # send the selected action
+            # actionSet = ["movenorth 1", "movesouth 1", "movewest 1", "moveeast 1"]
+            if self.prev_a == 0:
+                a = 1
+            elif self.prev_a == 1:
+                a = 0
+            elif self.prev_a == 2:
+                a = 3
+            elif self.prev_a == 3:
+                a = 2
+            agent_host.sendCommand(self.actions[a])
+            self.prev_s = current_s
+            self.prev_a = a
+            return 100
+
+        # otherwise, do normal q learning
         # select the next action
         rnd = random.random()
         if rnd < self.epsilon:

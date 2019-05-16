@@ -29,12 +29,13 @@
           <DrawBlock  x="4"   y="45"  z="1"  type="cobblestone" />                           <!-- the starting marker -->
 		  <!-- Boundary -->
           <DrawCuboid x1="19"  y1="46" z1="-1"  x2="19" y2="46" z2="17" type="stone" />           <!-- Left wall from start position -->
+          <DrawCuboid x1=" 5"  y1="45" z1="0 "  x2="19" y2="45" z2="17" type="stone" />
           <DrawCuboid x1="-1"  y1="46" z1="-1"  x2="18" y2="46" z2="-1" type="stone" />			  <!-- Bottom wall from start position -->
-          <DrawCuboid x1="-1"  y1="46" z1="-1"  x2="-1" y2="46" z2="17" type="stone" />           <!-- Right wall from start position -->
-          <DrawCuboid x1="-1"  y1="46" z1="17"  x2="19" y2="46" z2="17" type="stone" />           <!-- Top wall from start position -->
+          <DrawCuboid x1="-1"  y1="45" z1="-1"  x2="-1" y2="45" z2="17" type="stone" />        <!-- Right wall from start position -->
+          <DrawCuboid x1="14"  y1="46" z1="17"  x2="19" y2="46" z2="17" type="stone" />          <!-- Top wall from start position -->
 
-          <DrawBlock   x="18"   y="45"  z="16" type="lapis_block" />                           <!-- the destination marker -->
-          <DrawItem     x="18"   y="46"  z="16" type="diamond" />                               <!-- another destination marker -->
+          <DrawBlock   x="4"   y="45"  z="16" type="lapis_block" />                           <!-- the destination marker -->
+          <DrawItem     x="4"   y="46"  z="16" type="diamond" />                               <!-- another destination marker -->
           <!--<DrawBlock   x="2"   y="45"  z="2"  type="red_sandstone" />
           <DrawBlock   x="2"   y="45"  z="3"  type="red_sandstone" />
           <DrawBlock   x="2"   y="45"  z="1"  type="red_sandstone" />
@@ -67,13 +68,14 @@
         <Block reward="-100.0" type="lava" behaviour="onceOnly"/>
         <Block reward="100.0" type="lapis_block" behaviour="onceOnly"/>
         <Block reward="-100.0" type="red_sandstone" behaviour="onceOnly"/>
-        <Block reward="-5.0" type="stone" behaviour="onceOnly"/>
+        <Block reward="-75.0" type="stone"/>
       </RewardForTouchingBlockType>
       <RewardForSendingCommand reward="-1"/>
       <AgentQuitFromTouchingBlockType>
           <Block type="lava" />
           <Block type="lapis_block" />
           <Block type="red_sandstone" />
+          
       </AgentQuitFromTouchingBlockType>
     </AgentHandlers>
   </AgentSection>
