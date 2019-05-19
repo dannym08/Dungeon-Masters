@@ -40,6 +40,10 @@ import sys
 import time
 import malmoutils
 
+
+enemies = 5
+
+
 if sys.version_info[0] == 2:
     # Workaround for https://github.com/PythonCharmers/python-future/issues/262
     import Tkinter as tk
@@ -309,6 +313,114 @@ class TabQAgent(object):
                                     outline="#fff", fill="#fff")
         self.root.update()
 
+def add_enemies():
+    xml = ""
+    # add more enemies
+    enemy_pos = set()
+    for i in range(enemies):
+        x = random.randint(1, 17)
+        z = random.randint(1, 15)
+        if z == 1 and x in range(4, 4+2):
+            x = random.randint(1,17)
+            
+        while (x,z) in enemy_pos:
+            x = random.randint(3, 17)
+            z = random.randint(1, 13)
+            if z == 1 and x in range(4, 4+2):
+                x = random.randint(1,17)
+                
+        enemy_pos.add((x,z))
+        xml += '''<DrawCuboid x1="''' + str(x) + '''" y1="45" z1="''' + str(z) + '''" x2="''' + str(x-2) + '''" y2="45" z2="''' + str(z+2) + '''" type="red_sandstone"/>'''
+        xml += '''<DrawEntity x="''' + str(x-0.5) + '''" y="45" z="''' + str(z+1.5) + '''"  type="Villager" />'''
+    return xml
+    
+    
+def XML_generator():
+    xml = '''<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+                <Mission xmlns="http://ProjectMalmo.microsoft.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                
+                  <About>
+                    <Summary>Avoiding enemies to get to target.</Summary>
+                  </About>
+                  
+                  <ModSettings>
+                    <MsPerTick>1</MsPerTick>
+                  </ModSettings>
+                
+                  <ServerSection>
+                      <ServerInitialConditions>
+                            <Time>
+                                <StartTime>6000</StartTime>
+                                <AllowPassageOfTime>false</AllowPassageOfTime>
+                            </Time>
+                            <Weather>clear</Weather>
+                            <AllowSpawning>false</AllowSpawning>
+                      </ServerInitialConditions>
+                    <ServerHandlers>
+                      <FlatWorldGenerator generatorString="3;7,220*1,5*3,2;3;,biome_1"/>
+                      <DrawingDecorator>
+                        
+                          <!-- coordinates for cuboid are inclusive -->
+                          <DrawCuboid x1="-2" y1="46" z1="-2" x2="20" y2="50" z2="18" type="air" />            <!-- limits of our arena -->
+                          <DrawCuboid x1="-2" y1="45" z1="-2" x2="20" y2="45" z2="18" type="lava" />           <!-- lava floor -->
+                          <DrawCuboid x1="-1"  y1="44" z1="0"  x2="18" y2="45" z2="16" type="sandstone" />      <!-- floor of the arena -->
+                		  
+                          <DrawBlock  x="4"   y="45"  z="1"  type="cobblestone" />                           <!-- the starting marker -->
+                    		  
+                          <!-- Boundary -->
+                          <DrawCuboid x1="19"  y1="46" z1="-1"  x2="19" y2="46" z2="17" type="stone" />           <!-- Left wall from start position -->
+                          <DrawCuboid x1="-1"  y1="46" z1="-1"  x2="18" y2="46" z2="-1" type="stone" />			  <!-- Bottom wall from start position -->
+                          <DrawCuboid x1="-1"  y1="46" z1="-1"  x2="-1" y2="46" z2="17" type="stone" />           <!-- Right wall from start position -->
+                          <DrawCuboid x1="-1"  y1="46" z1="17"  x2="19" y2="46" z2="17" type="stone" />           <!-- Top wall from start position -->
+                
+                          <DrawBlock   x="18"   y="45"  z="16" type="lapis_block" />                           <!-- the destination marker -->
+                          <DrawItem     x="18"   y="46"  z="16" type="diamond" />                               <!-- another destination marker -->
+                		  
+                          <!-- Enemies -->
+                          '''+ add_enemies() + '''
+                		  
+                      </DrawingDecorator>
+                      <ServerQuitFromTimeUp timeLimitMs="2000000"/>
+                      <ServerQuitWhenAnyAgentFinishes/>
+                    </ServerHandlers>
+                  </ServerSection>
+                
+                  <AgentSection mode="Survival">
+                    <Name>Master</Name>
+                    <AgentStart>
+                      <Placement x="4.5" y="46.0" z="1.5" pitch="30" yaw="0"/>
+                    </AgentStart>
+                    <AgentHandlers>
+                      <ObservationFromFullStats/>
+                      <VideoProducer want_depth="false">
+                          <Width>640</Width>
+                          <Height>480</Height>
+                      </VideoProducer>
+                      <DiscreteMovementCommands>
+                          <ModifierList type="deny-list">
+                            <command>attack</command>
+                          </ModifierList>
+                      </DiscreteMovementCommands>
+                      <RewardForTouchingBlockType>
+                        <Block reward="-100.0" type="lava" behaviour="onceOnly"/>
+                        <Block reward="1000.0" type="lapis_block" behaviour="onceOnly"/>
+                        <Block reward="-100.0" type="red_sandstone" behaviour="onceOnly"/>
+                        <Block reward="-100.0" type="stone" behaviour="onceOnly"/>
+                      </RewardForTouchingBlockType>
+                      <RewardForSendingCommand reward="-1"/>
+                      <AgentQuitFromTouchingBlockType>
+                          <Block type="lava" />
+                          <Block type="lapis_block" />
+                          <Block type="red_sandstone" />
+                		  <Block type="stone" />
+                      </AgentQuitFromTouchingBlockType>
+                    </AgentHandlers>
+                  </AgentSection>
+                
+                </Mission>'''
+    return xml
+
+
 
 agent_host = MalmoPython.AgentHost()
 
@@ -319,21 +431,13 @@ try:
 except KeyError:
     print("MALMO_XSD_PATH not set? Check environment.")
     exit(1)
-
-print()
-print(schema_dir)
     
 mission_file = os.path.abspath(os.path.join(schema_dir, '..',
                                             'sample_missions', 'cliff_walking_1.xml'))  # Integration test path
-print()
-print(mission_file)
 
 if not os.path.exists(mission_file):
     mission_file = os.path.abspath(os.path.join(schema_dir, '..',
                                                 'Sample_missions', 'cliff_walking_1.xml'))  # Install path
-print()
-print(mission_file)
-print()
 
 if not os.path.exists(mission_file):
     print("Could not find cliff_walking_1.xml under MALMO_XSD_PATH")
@@ -383,19 +487,12 @@ for imap in range(num_maps):
         root=root)
 
     # -- set up the mission -- #
-    mission_file = agent_host.getStringArgument('mission_file')
-    with open(mission_file, 'r') as f:
-        print("Loading mission from %s" % mission_file)
-        mission_xml = f.read()
-        my_mission = MalmoPython.MissionSpec(mission_xml, True)
+    mission_xml = XML_generator()
+    my_mission = MalmoPython.MissionSpec(mission_xml, True)
     my_mission.removeAllCommandHandlers()
     my_mission.allowAllDiscreteMovementCommands()
     my_mission.requestVideo(640, 480)
     my_mission.setViewpoint(1)
-    # add holes for interest
-    #for z in range(2, 12, 2):
-    #    x = random.randint(1, 3)
-    #    my_mission.drawBlock(x, 45, z, "lava")
 
     my_clients = MalmoPython.ClientPool()
     my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10000))  # add Minecraft machines here as available
@@ -422,6 +519,7 @@ for imap in range(num_maps):
                     print("Error starting mission:", e)
                     exit(1)
                 else:
+                    print("here?")
                     time.sleep(2.5)
 
         print("Waiting for the mission to start", end=' ')
