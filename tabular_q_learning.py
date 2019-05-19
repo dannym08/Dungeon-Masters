@@ -274,6 +274,7 @@ class TabQAgent(object):
                         print('as expected.')
                 else:
                     print()
+                #input("Press Enter to continue...")
                 prev_x = curr_x
                 prev_z = curr_z
                 # act
@@ -364,7 +365,7 @@ malmoutils.parse_command_line(agent_host)
 
 # -- set up the python-side drawing -- #
 scale = 40
-world_x = 25
+world_x = 10
 world_y = 20
 root = tk.Tk()
 root.wm_title("Q-table")

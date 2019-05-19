@@ -27,21 +27,35 @@
           <DrawCuboid x1="-2"  y1="45" z1="0"  x2="20" y2="45" z2="16" type="sandstone" />      <!-- floor of the arena -->
 		  
           <DrawBlock  x="4"   y="45"  z="1"  type="cobblestone" />                           <!-- the starting marker -->
-		  <!-- Boundary -->
-          <DrawCuboid x1="19"  y1="46" z1="-1"  x2="19" y2="46" z2="17" type="stone" />           <!-- Left wall from start position -->
-          <DrawCuboid x1=" 5"  y1="45" z1="0 "  x2="19" y2="45" z2="17" type="stone" />
+		  
+          <!-- Start Walls -->
+          <!-- Boundary -->
+          <DrawCuboid x1="7"  y1="46" z1="-1"  x2="19" y2="46" z2="17" type="stone" />           <!-- Left wall from start position -->
+          <DrawCuboid x1=" 6"  y1="45" z1="0 "  x2="19" y2="45" z2="17" type="gold_block" />
           <DrawCuboid x1="-1"  y1="46" z1="-1"  x2="18" y2="46" z2="-1" type="stone" />			  <!-- Bottom wall from start position -->
-          <DrawCuboid x1="-1"  y1="45" z1="-1"  x2="-1" y2="45" z2="17" type="stone" />        <!-- Right wall from start position -->
+          <DrawCuboid x1="-1"  y1="45" z1="-1"  x2="-1" y2="45" z2="17" type="gold_block" />        <!-- Right wall from start position -->
           <DrawCuboid x1="14"  y1="46" z1="17"  x2="19" y2="46" z2="17" type="stone" />          <!-- Top wall from start position -->
+          
+          <DrawCuboid x1="2"  y1="45" z1="5"  x2="18" y2="45" z2="5" type="gold_block" />  <!-- first row wall-->
+          <DrawCuboid x1="4"  y1="45" z1="9"  x2="18" y2="45" z2="9" type="gold_block" />  <!-- second row wall-->
+          <DrawCuboid x1="1"  y1="45" z1="9"  x2="-1" y2="45" z2="9" type="gold_block" />  <!-- third row wall-->
+          <DrawCuboid x1="4"  y1="45" z1="9"  x2="4" y2="45" z2="14" type="gold_block" />  <!-- third row columns-->
+          <DrawCuboid x1="2"  y1="45" z1="9"  x2="2" y2="45" z2="14" type="gold_block" />  <!-- third row columns-->
 
+          <!-- Destination -->
           <DrawBlock   x="4"   y="45"  z="16" type="lapis_block" />                           <!-- the destination marker -->
           <DrawItem     x="4"   y="46"  z="16" type="diamond" />                               <!-- another destination marker -->
-          <!--<DrawBlock   x="2"   y="45"  z="2"  type="red_sandstone" />
-          <DrawBlock   x="2"   y="45"  z="3"  type="red_sandstone" />
-          <DrawBlock   x="2"   y="45"  z="1"  type="red_sandstone" />
-          <DrawBlock   x="1"   y="45"  z="2"  type="red_sandstone" />-->
+          
+          <!-- Enemy Section -->
           <DrawCuboid  x1="2"  y1="45" z1="1"  x2="0"   y2="45" z2="3" type="red_sandstone" />
           <DrawEntity  x="2"   y="45"  z="2"  type="Villager" />    <!-- Enemy -->
+          
+          <DrawCuboid  x1="3"  y1="45" z1="5"  x2="2"   y2="45" z2="6" type="red_sandstone" />
+          <DrawEntity  x="3"   y="45"  z="6"  type="Villager" />    <!-- Enemy -->
+          <DrawCuboid  x1="0"  y1="45" z1="15"  x2="1"   y2="45" z2="16" type="red_sandstone" />
+          <DrawEntity  x="0"   y="45"  z="16"  type="Villager" />    <!-- Enemy -->
+          
+          
       </DrawingDecorator>
       <ServerQuitFromTimeUp timeLimitMs="2000000"/>
       <ServerQuitWhenAnyAgentFinishes/>
@@ -51,7 +65,7 @@
   <AgentSection mode="Survival">
     <Name>The Dungeon Master</Name>
     <AgentStart>
-      <Placement x="4.5" y="46.0" z="1.5" pitch="30" yaw="0"/>
+      <Placement x="4.5" y="46.0" z="1.5" pitch="80" yaw="0"/>
     </AgentStart>
     <AgentHandlers>
       <ObservationFromFullStats/>
@@ -68,7 +82,7 @@
         <Block reward="-100.0" type="lava" behaviour="onceOnly"/>
         <Block reward="100.0" type="lapis_block" behaviour="onceOnly"/>
         <Block reward="-100.0" type="red_sandstone" behaviour="onceOnly"/>
-        <Block reward="-75.0" type="stone"/>
+        <Block reward="-75.0" type="gold_block"/>
       </RewardForTouchingBlockType>
       <RewardForSendingCommand reward="-1"/>
       <AgentQuitFromTouchingBlockType>
