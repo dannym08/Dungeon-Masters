@@ -24,7 +24,7 @@
         <!-- coordinates for cuboid are inclusive -->
           <DrawCuboid x1="-2" y1="46" z1="-2" x2="20" y2="50" z2="18" type="air" />            <!-- limits of our arena -->
           <DrawCuboid x1="-2" y1="45" z1="-2" x2="20" y2="45" z2="18" type="lava" />           <!-- lava floor -->
-          <DrawCuboid x1="-2"  y1="45" z1="0"  x2="20" y2="45" z2="16" type="sandstone" />      <!-- floor of the arena -->
+          <DrawCuboid x1="-1"  y1="44" z1="0"  x2="18" y2="45" z2="16" type="sandstone" />      <!-- floor of the arena -->
 		  
           <DrawBlock  x="4"   y="45"  z="1"  type="cobblestone" />                           <!-- the starting marker -->
 		  <!-- Boundary -->
@@ -40,7 +40,19 @@
           <DrawBlock   x="2"   y="45"  z="1"  type="red_sandstone" />
           <DrawBlock   x="1"   y="45"  z="2"  type="red_sandstone" />-->
           <DrawCuboid  x1="2"  y1="45" z1="1"  x2="0"   y2="45" z2="3" type="red_sandstone" />
-          <DrawEntity  x="2"   y="45"  z="2"  type="Villager" />    <!-- Enemy -->
+          <DrawEntity  x="1.5"   y="45"  z="2.5"  type="Villager" />    <!-- Enemy -->
+		  
+		  <DrawCuboid x1="10" y1="45" z1="8" x2="8" y2="45" z2="10" type="red_sandstone" />
+		  <DrawEntity x="9.5"  y="45" z="9.5" type="Villager" />     <!-- Enemy -->
+		  
+		  <DrawCuboid x1="15" y1="45" z1="2" x2="13" y2="45" z2="4" type="red_sandstone" />
+		  <DrawEntity x="14.5"  y="45" z="3.5" type="Villager" />     <!-- Enemy -->
+		  
+		  <DrawCuboid x1="6" y1="45" z1="12" x2="4" y2="45" z2="14" type="red_sandstone" />
+		  <DrawEntity x="5.5"  y="45" z="13.5" type="Villager" />     <!-- Enemy -->
+		  
+		  <DrawCuboid x1="18" y1="45" z1="5" x2="16" y2="45" z2="7" type="red_sandstone" />
+		  <DrawEntity x="17.5"  y="45" z="6.5" type="Villager" />     <!-- Enemy -->
       </DrawingDecorator>
       <ServerQuitFromTimeUp timeLimitMs="2000000"/>
       <ServerQuitWhenAnyAgentFinishes/>
@@ -74,6 +86,7 @@
           <Block type="lava" />
           <Block type="lapis_block" />
           <Block type="red_sandstone" />
+		  <Block type="stone" />
       </AgentQuitFromTouchingBlockType>
     </AgentHandlers>
   </AgentSection>
