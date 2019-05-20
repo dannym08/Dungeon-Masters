@@ -13,9 +13,10 @@ title:  Home
 - [Source Code](https://github.com/dannym08/Dungeon-Masters)
 
 ## About Dungeon-Masters
-Have you ever wanted to be the best stealth dungeon master without knowing the rules? Learn with our own agents as we take on the dungeon master's puzzles and learn how to reach the treasure at the end of the path while sneaking past various beasts and monsters!
+Have you ever wanted to be the best stealth dungeon master without knowing the rules? Learn with our own agents as we take on the dungeon master’s puzzles and learn how to reach the treasure at the end of the path while sneaking past various beasts and monsters!
 
-Our goal in this project is to create an agent that will train to solve a dungeon by avoiding conflict rather than with conflict. These dungeons will have various features such as obstacles, lava, monsters, small rewards along the way, giant treasure at the end of the path, and much more. The agents goal is to minimize the ammount of travel he agent has to use, while maximing the ammount of rewards he gets along the way. The agent is a modern pacifist Indianna Jones.
+Our goal in this project is to create an agent that will train to solve a dungeon by avoiding conflict rather than with conflict. These dungeons will have various features such as obstacles, lava, monsters, small rewards along the way, giant treasure at the end of the path, and much more. The agent's goal is to minimize the amount of travel he agent has to use while maximizing the number of rewards he gets along the way. The agent is a modern pacifist Indiana Jones.
+
 ## Video
 
 ## Photos
