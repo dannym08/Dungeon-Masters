@@ -40,8 +40,11 @@ import sys
 import time
 import malmoutils
 
-
-enemies = 5
+# map info
+arena_width = 10
+arena_length = 13
+smaller_dim = min(arena_length, arena_width)
+enemies = (smaller_dim-1)//3
 
 
 if sys.version_info[0] == 2:
@@ -316,20 +319,20 @@ class TabQAgent(object):
 def add_enemies():
     xml = ""
     # add more enemies
-    enemy_pos = set()
+    used_pos = set((arena_width, arena_length))
     for i in range(enemies):
-        x = random.randint(1, 17)
-        z = random.randint(1, 15)
-        if z == 1 and x in range(4, 4+2):
-            x = random.randint(1,17)
+        x = random.randint(2, arena_width)
+        z = random.randint(0, arena_length-2)
+        if z == 1 and x in range(4, 4+3):
+            x = random.randint(1, arena_width-2)
             
-        while (x,z) in enemy_pos:
-            x = random.randint(3, 17)
-            z = random.randint(1, 13)
-            if z == 1 and x in range(4, 4+2):
-                x = random.randint(1,17)
+        while (x,z) in used_pos:
+            x = random.randint(2, arena_width)
+            z = random.randint(0, arena_length-2)
+            if (z == 1  or z == 0) and x in range(4, 4+3):
+                x = random.randint(1, arena_width-2)
                 
-        enemy_pos.add((x,z))
+        used_pos.add((x,z))
         xml += '''<DrawCuboid x1="''' + str(x) + '''" y1="45" z1="''' + str(z) + '''" x2="''' + str(x-2) + '''" y2="45" z2="''' + str(z+2) + '''" type="red_sandstone"/>'''
         xml += '''<DrawEntity x="''' + str(x-0.5) + '''" y="45" z="''' + str(z+1.5) + '''"  type="Villager" />'''
     return xml
@@ -361,20 +364,20 @@ def XML_generator():
                       <DrawingDecorator>
                         
                           <!-- coordinates for cuboid are inclusive -->
-                          <DrawCuboid x1="-2" y1="46" z1="-2" x2="20" y2="50" z2="18" type="air" />            <!-- limits of our arena -->
-                          <DrawCuboid x1="-2" y1="45" z1="-2" x2="20" y2="45" z2="18" type="lava" />           <!-- lava floor -->
-                          <DrawCuboid x1="-1"  y1="44" z1="0"  x2="18" y2="45" z2="16" type="sandstone" />      <!-- floor of the arena -->
+                          <DrawCuboid x1="-2" y1="46" z1="-2" x2="''' + str(arena_width +2) + '''" y2="50" z2="''' + str(arena_length +2) + '''" type="air" />            <!-- limits of our arena -->
+                          <DrawCuboid x1="-2" y1="45" z1="-2" x2="''' + str(arena_width +2) + '''" y2="45" z2="''' + str(arena_length +2) + '''" type="lava" />           <!-- lava floor -->
+                          <DrawCuboid x1="-1"  y1="44" z1="0"  x2="''' + str(arena_width) + '''" y2="45" z2="''' + str(arena_length) + '''" type="sandstone" />      <!-- floor of the arena -->
                 		  
                           <DrawBlock  x="4"   y="45"  z="1"  type="cobblestone" />                           <!-- the starting marker -->
                     		  
                           <!-- Boundary -->
-                          <DrawCuboid x1="19"  y1="46" z1="-1"  x2="19" y2="46" z2="17" type="stone" />           <!-- Left wall from start position -->
-                          <DrawCuboid x1="-1"  y1="46" z1="-1"  x2="18" y2="46" z2="-1" type="stone" />			  <!-- Bottom wall from start position -->
-                          <DrawCuboid x1="-1"  y1="46" z1="-1"  x2="-1" y2="46" z2="17" type="stone" />           <!-- Right wall from start position -->
-                          <DrawCuboid x1="-1"  y1="46" z1="17"  x2="19" y2="46" z2="17" type="stone" />           <!-- Top wall from start position -->
+                          <DrawCuboid x1="''' + str(arena_width+1) + '''"  y1="46" z1="-1"  x2="''' + str(arena_width+1) + '''" y2="46" z2="''' + str(arena_length+1) + '''" type="stone" />           <!-- Left wall from start position -->
+                          <DrawCuboid x1="-1"  y1="46" z1="-1"  x2="''' + str(arena_width+1) + '''" y2="46" z2="-1" type="stone" />			  <!-- Bottom wall from start position -->
+                          <DrawCuboid x1="-1"  y1="46" z1="-1"  x2="-1" y2="46" z2="''' + str(arena_length+1) + '''" type="stone" />           <!-- Right wall from start position -->
+                          <DrawCuboid x1="-1"  y1="46" z1="''' + str(arena_length+1) + '''"  x2="''' + str(arena_width+1) + '''" y2="46" z2="''' + str(arena_length+1) + '''" type="stone" />           <!-- Top wall from start position -->
                 
-                          <DrawBlock   x="18"   y="45"  z="16" type="lapis_block" />                           <!-- the destination marker -->
-                          <DrawItem     x="18"   y="46"  z="16" type="diamond" />                               <!-- another destination marker -->
+                          <DrawBlock  x="''' + str(arena_width) + '''"   y="45"  z="''' + str(arena_length) + '''" type="lapis_block" />                           <!-- the destination marker -->
+                          <DrawItem   x="''' + str(arena_width) + '''"   y="46"  z="''' + str(arena_length) + '''" type="diamond" />                               <!-- another destination marker -->
                 		  
                           <!-- Enemies -->
                           '''+ add_enemies() + '''
@@ -405,14 +408,14 @@ def XML_generator():
                         <Block reward="-100.0" type="lava" behaviour="onceOnly"/>
                         <Block reward="1000.0" type="lapis_block" behaviour="onceOnly"/>
                         <Block reward="-100.0" type="red_sandstone" behaviour="onceOnly"/>
-                        <Block reward="-100.0" type="stone" behaviour="onceOnly"/>
+                        <Block reward="-500.0" type="stone" behaviour="onceOnly"/>
                       </RewardForTouchingBlockType>
                       <RewardForSendingCommand reward="-1"/>
                       <AgentQuitFromTouchingBlockType>
                           <Block type="lava" />
                           <Block type="lapis_block" />
                           <Block type="red_sandstone" />
-                		  <Block type="stone" />
+                          <Block type="stone" />
                       </AgentQuitFromTouchingBlockType>
                     </AgentHandlers>
                   </AgentSection>
