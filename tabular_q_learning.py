@@ -337,20 +337,20 @@ class TabQAgent(object):
 def add_enemies(arena_width,arena_height):
     xml = ""
     # add more enemies
-    enemy_pos = set()
+    used_pos = set((arena_width, arena_height))
     for i in range(enemies):
-        x = random.randint(1, arena_width-1)
-        z = random.randint(1, arena_height-1)
-        if z == 1 and x in range(4, 4+2):
-            x = random.randint(1,arena_width-1)
-            
-        while (x,z) in enemy_pos:
-            x = random.randint(3, arena_width-1)
-            z = random.randint(1, arena_height-3)
-            if z == 1 and x in range(4, 4+2):
-                x = random.randint(1,arena_width-1)
-                
-        enemy_pos.add((x,z))
+        x = random.randint(2, arena_width)
+        z = random.randint(0, arena_height-2)
+        if z == 1 and x in range(4, 4+3):
+            x = random.randint(1, arena_width-2)
+        
+        while (x,z) in used_pos:
+            x = random.randint(2, arena_width)
+            z = random.randint(0, arena_height-2)
+            if (z == 1  or z == 0) and x in range(4, 4+3):
+                x = random.randint(1, arena_width-2)
+        
+        used_pos.add((x,z))
         xml += '''<DrawCuboid x1="''' + str(x) + '''" y1="45" z1="''' + str(z) + '''" x2="''' + str(x-2) + '''" y2="45" z2="''' + str(z+2) + '''" type="red_sandstone"/>'''
         xml += '''<DrawEntity x="''' + str(x-0.5) + '''" y="45" z="''' + str(z+1.5) + '''"  type="Villager" />'''
     return xml
@@ -397,8 +397,8 @@ def XML_generator(x,y):
                           <DrawCuboid x1="-1"  y1="45" z1="-1"  x2="-1" y2="45" z2="'''+str(arena_height)+'''" type="gold_block" />           <!-- Right wall from start position -->
                           <DrawCuboid x1="-1"  y1="45" z1="'''+str(arena_height)+'''"  x2="'''+str(arena_width+1)+'''" y2="45" z2="'''+str(arena_height)+'''" type="gold_block" />           <!-- Top wall from start position -->
                 
-                          <DrawBlock   x="18"   y="45"  z="16" type="lapis_block" />                           <!-- the destination marker -->
-                          <DrawItem     x="18"   y="46"  z="16" type="diamond" />                               <!-- another destination marker -->
+                          <DrawBlock  x="''' + str(arena_width) + '''"   y="45"  z="''' + str(arena_height-1) + '''" type="lapis_block" />                           <!-- the destination marker -->
+                          <DrawItem   x="''' + str(arena_width) + '''"   y="46"  z="''' + str(arena_height-1) + '''" type="diamond" />                               <!-- another destination marker -->
                 		  
                           <!-- Enemies -->
                           '''+ add_enemies(arena_width,arena_height) + '''
