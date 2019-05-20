@@ -336,19 +336,27 @@ class TabQAgent(object):
 
 def add_enemies(arena_width,arena_height):
     xml = ""
-    # add more enemies
-    used_pos = set((arena_width, arena_height))
+    # add more enemies, but avoid end goal
+    used_pos = set((arena_width, arena_height-1))
+    used_pos.add((arena_width+1, arena_height-1))
+    used_pos.add((arena_width-1, arena_height-1))
+    used_pos.add((arena_width, arena_height-2))
+    used_pos.add((arena_width, arena_height))
+    
     for i in range(enemies):
-        x = random.randint(2, arena_width)
-        z = random.randint(0, arena_height-2)
-        if z == 1 and x in range(4, 4+3):
-            x = random.randint(1, arena_width-2)
-        
-        while (x,z) in used_pos:
+        # now avoid start goal
+        #x = random.randint(2, arena_width)
+        #z = random.randint(0, arena_height-2)
+        #if z == 1 and x in range(3, 4+3):
+            #x = random.randint(1, arena_width-2)
+        while True:
             x = random.randint(2, arena_width)
-            z = random.randint(0, arena_height-2)
-            if (z == 1  or z == 0) and x in range(4, 4+3):
-                x = random.randint(1, arena_width-2)
+            z = random.randint(0, arena_height-4)
+            while (z <= 2 ) and x in range(3, 4+3):
+                x = random.randint(2, arena_width)
+                z = random.randint(0, arena_height-4)
+            if (x,z) not in used_pos:
+                break
         
         used_pos.add((x,z))
         xml += '''<DrawCuboid x1="''' + str(x) + '''" y1="45" z1="''' + str(z) + '''" x2="''' + str(x-2) + '''" y2="45" z2="''' + str(z+2) + '''" type="red_sandstone"/>'''
