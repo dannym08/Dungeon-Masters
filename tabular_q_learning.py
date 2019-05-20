@@ -40,10 +40,6 @@ import sys
 import time
 import malmoutils
 
-
-enemies = 5
-
-
 if sys.version_info[0] == 2:
     # Workaround for https://github.com/PythonCharmers/python-future/issues/262
     import Tkinter as tk
@@ -342,6 +338,9 @@ def add_enemies(arena_width,arena_height):
     used_pos.add((arena_width-1, arena_height-1))
     used_pos.add((arena_width, arena_height-2))
     used_pos.add((arena_width, arena_height))
+    
+    smaller_dim = min(arena_width, arena_height)
+    enemies = (smaller_dim-1)//3
     
     for i in range(enemies):
         # now avoid start goal
