@@ -346,7 +346,7 @@ def add_enemies(arena_width,arena_height):
             
         while (x,z) in enemy_pos:
             x = random.randint(3, arena_width-1)
-            z = random.randint(1, arena_heigh-3)
+            z = random.randint(1, arena_height-3)
             if z == 1 and x in range(4, 4+2):
                 x = random.randint(1,arena_width-1)
                 
