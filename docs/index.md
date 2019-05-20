@@ -3,6 +3,8 @@ layout: default
 title:  Home
 ---
 
+![header photo](images/header.png)
+
 ## Reports:
 
 - [Proposal](proposal.html)
