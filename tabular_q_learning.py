@@ -334,21 +334,21 @@ class TabQAgent(object):
                                     outline="#fff", fill="#fff")
         self.root.update()
 
-def add_enemies():
+def add_enemies(arena_width,arena_height):
     xml = ""
     # add more enemies
     enemy_pos = set()
     for i in range(enemies):
-        x = random.randint(1, 17)
-        z = random.randint(1, 15)
+        x = random.randint(1, arena_width-1)
+        z = random.randint(1, arena_height-1)
         if z == 1 and x in range(4, 4+2):
-            x = random.randint(1,17)
+            x = random.randint(1,arena_width-1)
             
         while (x,z) in enemy_pos:
-            x = random.randint(3, 17)
-            z = random.randint(1, 13)
+            x = random.randint(3, arena_width-1)
+            z = random.randint(1, arena_heigh-3)
             if z == 1 and x in range(4, 4+2):
-                x = random.randint(1,17)
+                x = random.randint(1,arena_width-1)
                 
         enemy_pos.add((x,z))
         xml += '''<DrawCuboid x1="''' + str(x) + '''" y1="45" z1="''' + str(z) + '''" x2="''' + str(x-2) + '''" y2="45" z2="''' + str(z+2) + '''" type="red_sandstone"/>'''
@@ -356,7 +356,10 @@ def add_enemies():
     return xml
     
     
-def XML_generator():
+def XML_generator(x,y):
+    arena_width=x-1
+    arena_height=y
+    print(x,y)
     xml = '''<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
                 <Mission xmlns="http://ProjectMalmo.microsoft.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
                 
@@ -382,23 +385,23 @@ def XML_generator():
                       <DrawingDecorator>
                         
                           <!-- coordinates for cuboid are inclusive -->
-                          <DrawCuboid x1="-2" y1="46" z1="-2" x2="20" y2="50" z2="18" type="air" />            <!-- limits of our arena -->
-                          <DrawCuboid x1="-2" y1="45" z1="-2" x2="20" y2="45" z2="18" type="lava" />           <!-- lava floor -->
-                          <DrawCuboid x1="-1"  y1="44" z1="0"  x2="18" y2="45" z2="16" type="sandstone" />      <!-- floor of the arena -->
+                          <DrawCuboid x1="-2" y1="46" z1="-2" x2="'''+str(arena_width+2)+'''" y2="50" z2="'''+str(arena_height+2)+'''" type="air" />            <!-- limits of our arena -->
+                          <DrawCuboid x1="-2" y1="45" z1="-2" x2="'''+str(arena_width+2)+'''" y2="45" z2="'''+str(arena_height+2)+'''" type="lava" />           <!-- lava floor -->
+                          <DrawCuboid x1="-1"  y1="44" z1="0"  x2="'''+str(arena_width)+'''" y2="45" z2="'''+str(arena_height)+'''" type="sandstone" />      <!-- floor of the arena -->
                 		  
                           <DrawBlock  x="4"   y="45"  z="1"  type="cobblestone" />                           <!-- the starting marker -->
                     		  
                           <!-- Boundary -->
-                          <DrawCuboid x1="19"  y1="46" z1="-1"  x2="19" y2="46" z2="17" type="stone" />           <!-- Left wall from start position -->
-                          <DrawCuboid x1="-1"  y1="46" z1="-1"  x2="18" y2="46" z2="-1" type="stone" />			  <!-- Bottom wall from start position -->
-                          <DrawCuboid x1="-1"  y1="46" z1="-1"  x2="-1" y2="46" z2="17" type="stone" />           <!-- Right wall from start position -->
-                          <DrawCuboid x1="-1"  y1="46" z1="17"  x2="19" y2="46" z2="17" type="stone" />           <!-- Top wall from start position -->
+                          <DrawCuboid x1="'''+str(arena_width+1)+'''"  y1="45" z1="-1"  x2="'''+str(arena_width+1)+'''" y2="45" z2="'''+str(arena_height)+'''" type="gold_block" />           <!-- Left wall from start position -->
+                          <DrawCuboid x1="-1"  y1="45" z1="-1"  x2="'''+str(arena_width+1)+'''" y2="45" z2="-1" type="gold_block" />			  <!-- Bottom wall from start position -->
+                          <DrawCuboid x1="-1"  y1="45" z1="-1"  x2="-1" y2="45" z2="'''+str(arena_height)+'''" type="gold_block" />           <!-- Right wall from start position -->
+                          <DrawCuboid x1="-1"  y1="45" z1="'''+str(arena_height)+'''"  x2="'''+str(arena_width+1)+'''" y2="45" z2="'''+str(arena_height)+'''" type="gold_block" />           <!-- Top wall from start position -->
                 
                           <DrawBlock   x="18"   y="45"  z="16" type="lapis_block" />                           <!-- the destination marker -->
                           <DrawItem     x="18"   y="46"  z="16" type="diamond" />                               <!-- another destination marker -->
                 		  
                           <!-- Enemies -->
-                          '''+ add_enemies() + '''
+                          '''+ add_enemies(arena_width,arena_height) + '''
                 		  
                       </DrawingDecorator>
                       <ServerQuitFromTimeUp timeLimitMs="2000000"/>
@@ -409,7 +412,7 @@ def XML_generator():
                   <AgentSection mode="Survival">
                     <Name>Master</Name>
                     <AgentStart>
-                      <Placement x="4.5" y="46.0" z="1.5" pitch="30" yaw="0"/>
+                      <Placement x="4.5" y="46.0" z="1.5" pitch="70" yaw="0"/>
                     </AgentStart>
                     <AgentHandlers>
                       <ObservationFromFullStats/>
@@ -427,6 +430,7 @@ def XML_generator():
                         <Block reward="1000.0" type="lapis_block" behaviour="onceOnly"/>
                         <Block reward="-100.0" type="red_sandstone" behaviour="onceOnly"/>
                         <Block reward="-100.0" type="stone" behaviour="onceOnly"/>
+                        <Block reward="-75.0" type="gold_block"/>
                       </RewardForTouchingBlockType>
                       <RewardForSendingCommand reward="-1"/>
                       <AgentQuitFromTouchingBlockType>
@@ -475,13 +479,15 @@ agent_host.addOptionalFloatArgument('gamma', 'Discount factor.', 1.0)
 agent_host.addOptionalFlag('load_model', 'Load initial model from model_file.')
 agent_host.addOptionalStringArgument('model_file', 'Path to the initial model file', '')
 agent_host.addOptionalFlag('debug', 'Turn on debugging.')
+agent_host.addOptionalIntArgument('x','The width of the arena.',18)
+agent_host.addOptionalIntArgument('y','The width of the arena.',16)
 
 malmoutils.parse_command_line(agent_host)
 
 # -- set up the python-side drawing -- #
 scale = 40
-world_x = 10
-world_y = 20
+world_x = agent_host.getIntArgument('x')
+world_y = agent_host.getIntArgument('y')
 root = tk.Tk()
 root.wm_title("Q-table")
 canvas = tk.Canvas(root, width=world_x * scale, height=world_y * scale, borderwidth=0, highlightthickness=0, bg="black")
@@ -508,7 +514,7 @@ for imap in range(num_maps):
         root=root)
 
     # -- set up the mission -- #
-    mission_xml = XML_generator()
+    mission_xml = XML_generator(x=world_x,y=world_y)
     my_mission = MalmoPython.MissionSpec(mission_xml, True)
     my_mission.removeAllCommandHandlers()
     my_mission.allowAllDiscreteMovementCommands()
