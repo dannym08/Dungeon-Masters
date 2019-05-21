@@ -504,7 +504,7 @@ root.update()
 if agent_host.receivedArgument("test"):
     num_maps = 1
 else:
-    num_maps = 30000
+    num_maps = 1
 
 for imap in range(num_maps):
 
@@ -535,7 +535,7 @@ for imap in range(num_maps):
     agentID = 0
     expID = 'tabular_q_learning'
 
-    num_repeats = 150
+    num_repeats = 300
     cumulative_rewards = []
     for i in range(num_repeats):
 
@@ -579,3 +579,4 @@ for imap in range(num_maps):
     print()
     print("Cumulative rewards for all %d runs:" % num_repeats)
     print(cumulative_rewards)
+    input()
