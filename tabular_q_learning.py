@@ -377,6 +377,7 @@ def XML_generator(x,y,items):
     arena_width=x-1
     arena_height=y
     no_items = set((arena_width, arena_height-1))
+    no_items.add((4,1))
     xml = '''<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
                 <Mission xmlns="http://ProjectMalmo.microsoft.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
                 
@@ -450,11 +451,13 @@ def XML_generator(x,y,items):
                       <RewardForTouchingBlockType>
                         <Block reward="-100.0" type="lava" behaviour="onceOnly"/>
                         <Block reward="1000.0" type="lapis_block" behaviour="onceOnly"/>
-                        <Block reward="-100.0" type="red_sandstone" behaviour="onceOnly"/>
-                        <Block reward="-500.0" type="stone" behaviour="onceOnly"/>
+                        <Block reward="-500.0" type="red_sandstone" behaviour="onceOnly"/>
                         <Block reward="-75.0" type="gold_block"/>
                       </RewardForTouchingBlockType>
                       <RewardForSendingCommand reward="-1"/>
+                      <RewardForCollectingItem>
+                        <Item reward="250.0" type="diamond" />
+                      </RewardForCollectingItem>
                       <AgentQuitFromTouchingBlockType>
                           <Block type="lava" />
                           <Block type="lapis_block" />
