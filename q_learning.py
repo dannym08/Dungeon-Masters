@@ -426,9 +426,6 @@ def XML_generator(x,y,items):
                 		  
                           <!-- Enemies -->
                           '''+ add_enemies(arena_width,arena_height, no_items) + '''
-                          
-                          <!-- Items -->
-                          '''+ add_items(arena_width,arena_height, items, no_items) + '''
                 		  
                       </DrawingDecorator>
                       <ServerQuitFromTimeUp timeLimitMs="2000000"/>
