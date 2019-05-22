@@ -462,7 +462,7 @@ def XML_generator(x,y,items):
                       </RewardForTouchingBlockType>
                       <RewardForSendingCommand reward="-1"/>
                       <RewardForCollectingItem>
-                        <Item reward="100.0" type="diamond"  behaviour="onceOnly"/>
+                        <Item reward="100.0" type="diamond" />
                       </RewardForCollectingItem>
                       <AgentQuitFromTouchingBlockType>
                           <Block type="lava" />
