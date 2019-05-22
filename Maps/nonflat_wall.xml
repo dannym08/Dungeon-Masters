@@ -66,7 +66,7 @@
         <Block reward="-100.0" type="lava" behaviour="onceOnly"/>
         <Block reward="100.0" type="lapis_block" behaviour="onceOnly"/>
         <Block reward="-100.0" type="red_sandstone" behaviour="onceOnly"/>
-          <Block reward="-5.0" type="stone" behaviour="onceOnly"/>
+        <Block reward="-5.0" type="stone" behaviour="onceOnly"/>
       </RewardForTouchingBlockType>
       <RewardForSendingCommand reward="-1"/>
       <AgentQuitFromTouchingBlockType>

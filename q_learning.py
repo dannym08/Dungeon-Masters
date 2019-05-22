@@ -1,4 +1,10 @@
 from __future__ import print_function
+
+# Our Q-learning is based off Microsoft's tabular Q-learning located at https://github.com/microsoft/malmo
+# Our Agents goal here it to find the end goal, while avoiding enetering the vision radius of any monsters and minimizing the steps of the enemy
+#
+
+
 # ------------------------------------------------------------------------------------------------
 # Copyright (c) 2016 Microsoft Corporation
 # 
