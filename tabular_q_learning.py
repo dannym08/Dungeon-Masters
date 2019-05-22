@@ -439,7 +439,7 @@ def XML_generator(x,y):
                         <Block reward="-100.0" type="red_sandstone" behaviour="onceOnly"/>
                         <Block reward="-500.0" type="stone" behaviour="onceOnly"/>
                         <Block reward="-75.0" type="gold_block"/>
-						<Block reward="50" type="iron_block" behavior="onceOnly"/>
+						<Block reward="50" type="iron_block" behaviour="onceOnly"/>
                       </RewardForTouchingBlockType>
                       <RewardForSendingCommand reward="-1"/>
                       <AgentQuitFromTouchingBlockType>
@@ -543,8 +543,10 @@ for imap in range(num_maps):
     cumulative_rewards = []
     for i in range(num_repeats):
         print("\nMap %d - Mission %d of %d:" % (imap, i + 1, num_repeats))
-        if i in pauses:
+        if i == 0:
             input()
+        #if i in pauses:
+         #   input()
         my_mission_record = malmoutils.get_default_recording_object(agent_host,
                                                                     "./save_%s-map%d-rep%d" % (expID, imap, i))
 
