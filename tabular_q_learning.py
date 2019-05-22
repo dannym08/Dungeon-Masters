@@ -95,8 +95,8 @@ class TabQAgent(object):
         
         obs_text = world_state.observations[-1].text
         obs = json.loads(obs_text)  # most recent observation
-        print(obs)
-        print(current_r)
+        #print(obs)
+        #print(current_r)
         self.logger.debug(obs)
         if not u'XPos' in obs or not u'ZPos' in obs:
             self.logger.error("Incomplete observation received: %s" % obs_text)
@@ -137,17 +137,17 @@ class TabQAgent(object):
         rnd = random.random()
         if rnd < self.epsilon:
             a = random.randint(0, len(self.actions) - 1)
-            self.logger.info("Random action: %s" % self.actions[a])
+            #self.logger.info("Random action: %s" % self.actions[a])
         else:
             m = max(self.q_table[current_s])
-            self.logger.debug("Current values: %s" % ",".join(str(x) for x in self.q_table[current_s]))
+           # self.logger.debug("Current values: %s" % ",".join(str(x) for x in self.q_table[current_s]))
             l = list()
             for x in range(0, len(self.actions)):
                 if self.q_table[current_s][x] == m:
                     l.append(x)
             y = random.randint(0, len(l) - 1)
             a = l[y]
-            self.logger.info("Taking q action: %s" % self.actions[a])
+            #self.logger.info("Taking q action: %s" % self.actions[a])
 
         # send the selected action
         agent_host.sendCommand(self.actions[a])
@@ -186,7 +186,7 @@ class TabQAgent(object):
         obs = json.loads(world_state.observations[-1].text)
         prev_x = obs[u'XPos']
         prev_z = obs[u'ZPos']
-        print('Initial position:', prev_x, ',', prev_z)
+       # print('Initial position:', prev_x, ',', prev_z)
 
         if save_images:
             # save the frame, for debugging
@@ -206,7 +206,7 @@ class TabQAgent(object):
         while world_state.is_mission_running:
 
             # wait for the position to have changed and a reward received
-            print('Waiting for data...', end=' ')
+           # print('Waiting for data...', end=' ')
             while True:
                 world_state = agent_host.peekWorldState()
                 if not world_state.is_mission_running:
@@ -218,10 +218,10 @@ class TabQAgent(object):
                     curr_z = obs[u'ZPos']
                     if require_move:
                         if math.hypot(curr_x - prev_x, curr_z - prev_z) > tol:
-                            print('received.')
+                            #print('received.')
                             break
                     else:
-                        print('received.')
+                        #print('received.')
                         break
             # wait for a frame to arrive after that
             num_frames_seen = world_state.number_of_video_frames_since_last_state
@@ -253,8 +253,7 @@ class TabQAgent(object):
                 obs = json.loads(world_state.observations[-1].text)
                 curr_x = obs[u'XPos']
                 curr_z = obs[u'ZPos']
-                print('New position from observation:', curr_x, ',', curr_z, 'after action:', self.actions[self.prev_a],
-                      end=' ')  # NSWE
+               # print('New position from observation:', curr_x, ',', curr_z, 'after action:', self.actions[self.prev_a],end=' ')  # NSWE
                 if check_expected_position:
                     expected_x = prev_x + [0, 0, -1, 1][self.prev_a]
                     expected_z = prev_z + [-1, 1, 0, 0][self.prev_a]
@@ -262,16 +261,17 @@ class TabQAgent(object):
                         print(' - ERROR DETECTED! Expected:', expected_x, ',', expected_z)
                         input("Press Enter to continue...")
                     else:
-                        print('as expected.')
+                        #print('as expected.')
+                        pass
                     curr_x_from_render = frame.xPos
                     curr_z_from_render = frame.zPos
-                    print('New position from render:', curr_x_from_render, ',', curr_z_from_render, 'after action:',
-                          self.actions[self.prev_a], end=' ')  # NSWE
+                    #print('New position from render:', curr_x_from_render, ',', curr_z_from_render, 'after action:', self.actions[self.prev_a], end=' ')  # NSWE
                     if math.hypot(curr_x_from_render - expected_x, curr_z_from_render - expected_z) > tol:
                         print(' - ERROR DETECTED! Expected:', expected_x, ',', expected_z)
                         input("Press Enter to continue...")
                     else:
-                        print('as expected.')
+                        #print('as expected.')
+                        pass
                 else:
                     print()
                 #input("Press Enter to continue...")
@@ -406,7 +406,8 @@ def XML_generator(x,y):
                 
                           <DrawBlock  x="''' + str(arena_width) + '''"   y="45"  z="''' + str(arena_height-1) + '''" type="lapis_block" />                           <!-- the destination marker -->
                           <DrawItem   x="''' + str(arena_width) + '''"   y="46"  z="''' + str(arena_height-1) + '''" type="diamond" />                               <!-- another destination marker -->
-                		  
+						  
+
                           <!-- Enemies -->
                           '''+ add_enemies(arena_width,arena_height) + '''
                 		  
@@ -419,7 +420,7 @@ def XML_generator(x,y):
                   <AgentSection mode="Survival">
                     <Name>Master</Name>
                     <AgentStart>
-                      <Placement x="4.5" y="46.0" z="1.5" pitch="70" yaw="0"/>
+                      <Placement x="4.5" y="46.0" z="1.5" pitch="45" yaw="0"/>
                     </AgentStart>
                     <AgentHandlers>
                       <ObservationFromFullStats/>
@@ -438,6 +439,7 @@ def XML_generator(x,y):
                         <Block reward="-100.0" type="red_sandstone" behaviour="onceOnly"/>
                         <Block reward="-500.0" type="stone" behaviour="onceOnly"/>
                         <Block reward="-75.0" type="gold_block"/>
+						<Block reward="50" type="iron_block"/>
                       </RewardForTouchingBlockType>
                       <RewardForSendingCommand reward="-1"/>
                       <AgentQuitFromTouchingBlockType>
@@ -501,11 +503,13 @@ canvas = tk.Canvas(root, width=world_x * scale, height=world_y * scale, borderwi
 canvas.grid()
 root.update()
 
-if agent_host.receivedArgument("test"):
-    num_maps = 1
-else:
-    num_maps = 1
+#if agent_host.receivedArgument("test"):
+#    num_maps = 1
+#else:
+#    num_maps = 1
 
+num_maps = 1
+pauses = [1, 10, 50, 100, 200, 300, 500, 600, 700, 800, 1000, 1200, 1400, 1599] ## pauses for screenshot testing
 for imap in range(num_maps):
 
     # -- set up the agent -- #
@@ -535,12 +539,12 @@ for imap in range(num_maps):
     agentID = 0
     expID = 'tabular_q_learning'
 
-    num_repeats = 300
+    num_repeats = 1600  
     cumulative_rewards = []
     for i in range(num_repeats):
-
         print("\nMap %d - Mission %d of %d:" % (imap, i + 1, num_repeats))
-
+        if i in pauses:
+            input()
         my_mission_record = malmoutils.get_default_recording_object(agent_host,
                                                                     "./save_%s-map%d-rep%d" % (expID, imap, i))
 
@@ -556,7 +560,7 @@ for imap in range(num_maps):
                     print("here?")
                     time.sleep(2.5)
 
-        print("Waiting for the mission to start", end=' ')
+        #print("Waiting for the mission to start", end=' ')
         world_state = agent_host.getWorldState()
         while not world_state.has_mission_begun:
             print(".", end="")
