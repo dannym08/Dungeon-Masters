@@ -1,4 +1,10 @@
 from __future__ import print_function
+
+# Our Q-learning is based off Microsoft's tabular Q-learning located at https://github.com/microsoft/malmo
+# Our Agents goal here it to find the end goal, while avoiding enetering the vision radius of any monsters and minimizing the steps of the enemy
+#
+
+
 # ------------------------------------------------------------------------------------------------
 # Copyright (c) 2016 Microsoft Corporation
 # 
@@ -92,9 +98,11 @@ class TabQAgent(object):
 
     def act(self, world_state, agent_host, current_r):
         """take 1 action in response to the current world state"""
-
+        
         obs_text = world_state.observations[-1].text
         obs = json.loads(obs_text)  # most recent observation
+        print(obs)
+        print(current_r)
         self.logger.debug(obs)
         if not u'XPos' in obs or not u'ZPos' in obs:
             self.logger.error("Incomplete observation received: %s" % obs_text)
@@ -113,6 +121,24 @@ class TabQAgent(object):
 
         self.drawQ(curr_x=int(obs[u'XPos']), curr_y=int(obs[u'ZPos']))
 
+        #Special: if current_r is -76 (wall) then we go backwards
+        if current_r == -76:
+            # send the selected action
+            # actionSet = ["movenorth 1", "movesouth 1", "movewest 1", "moveeast 1"]
+            if self.prev_a == 0:
+                a = 1
+            elif self.prev_a == 1:
+                a = 0
+            elif self.prev_a == 2:
+                a = 3
+            elif self.prev_a == 3:
+                a = 2
+            agent_host.sendCommand(self.actions[a])
+            self.prev_s = current_s
+            self.prev_a = a
+            return 100
+
+        # otherwise, do normal q learning
         # select the next action
         rnd = random.random()
         if rnd < self.epsilon:
@@ -254,6 +280,7 @@ class TabQAgent(object):
                         print('as expected.')
                 else:
                     print()
+                #input("Press Enter to continue...")
                 prev_x = curr_x
                 prev_z = curr_z
                 # act
@@ -309,6 +336,144 @@ class TabQAgent(object):
                                     outline="#fff", fill="#fff")
         self.root.update()
 
+def add_enemies(arena_width,arena_height, no_items):
+    xml = ""
+    # add more enemies, but avoid end goal
+    used_pos = set((arena_width, arena_height-3))
+    
+    smaller_dim = min(arena_width, arena_height)
+    enemies = (smaller_dim-1)//3
+    
+    for i in range(enemies):
+        # now avoid start goal
+        #x = random.randint(2, arena_width)
+        #z = random.randint(0, arena_height-2)
+        #if z == 1 and x in range(3, 4+3):
+            #x = random.randint(1, arena_width-2)
+        while True:
+            x = random.randint(2, arena_width)
+            z = random.randint(0, arena_height-4)
+            while (z <= 2 ) and x in range(3, 4+3):
+                x = random.randint(2, arena_width)
+                z = random.randint(0, arena_height-4)
+            if (x,z) not in used_pos:
+                break
+        
+        used_pos.add((x,z))
+        no_items.add((x-1,z+1))
+        xml += '''<DrawCuboid x1="''' + str(x) + '''" y1="45" z1="''' + str(z) + '''" x2="''' + str(x-2) + '''" y2="45" z2="''' + str(z+2) + '''" type="red_sandstone"/>'''
+        xml += '''<DrawEntity x="''' + str(x-0.5) + '''" y="45" z="''' + str(z+1.5) + '''"  type="Villager" />'''
+    return xml
+
+def add_items(arena_width, arena_height, items, no_items):
+    xml = ""
+    for i in range(items):
+        
+        while True:
+            x = random.randint(0, arena_width)
+            z = random.randint(0, arena_height-1)
+            if (x,z) not in no_items:
+                break
+            
+        no_items.add((x,z))
+        xml += '''<DrawItem x="''' + str(x) + '''" y="46" z="''' + str(z) + '''" type="diamond" />'''
+    return xml
+    
+def XML_generator(x,y,items):
+    arena_width=x-1
+    arena_height=y
+    no_items = set((arena_width, arena_height-1))
+    no_items.add((4,1))
+    xml = '''<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+                <Mission xmlns="http://ProjectMalmo.microsoft.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                
+                  <About>
+                    <Summary>Avoiding enemies to get to target.</Summary>
+                  </About>
+                  
+                  <ModSettings>
+                    <MsPerTick>1</MsPerTick>
+                  </ModSettings>
+                
+                  <ServerSection>
+                      <ServerInitialConditions>
+                            <Time>
+                                <StartTime>6000</StartTime>
+                                <AllowPassageOfTime>false</AllowPassageOfTime>
+                            </Time>
+                            <Weather>clear</Weather>
+                            <AllowSpawning>false</AllowSpawning>
+                      </ServerInitialConditions>
+                    <ServerHandlers>
+                      <FlatWorldGenerator generatorString="3;7,220*1,5*3,2;3;,biome_1"/>
+                      <DrawingDecorator>
+                        
+                          <!-- coordinates for cuboid are inclusive -->
+                          <DrawCuboid x1="-2" y1="46" z1="-2" x2="'''+str(arena_width+2)+'''" y2="50" z2="'''+str(arena_height+2)+'''" type="air" />            <!-- limits of our arena -->
+                          <DrawCuboid x1="-2" y1="45" z1="-2" x2="'''+str(arena_width+2)+'''" y2="45" z2="'''+str(arena_height+2)+'''" type="lava" />           <!-- lava floor -->
+                          <DrawCuboid x1="-1"  y1="44" z1="0"  x2="'''+str(arena_width)+'''" y2="45" z2="'''+str(arena_height)+'''" type="sandstone" />      <!-- floor of the arena -->
+                		  
+                          <DrawBlock  x="4"   y="45"  z="1"  type="cobblestone" />                           <!-- the starting marker -->
+                    		  
+                          <!-- Boundary -->
+                          <DrawCuboid x1="'''+str(arena_width+1)+'''"  y1="45" z1="-1"  x2="'''+str(arena_width+1)+'''" y2="45" z2="'''+str(arena_height)+'''" type="gold_block" />           <!-- Left wall from start position -->
+                          <DrawCuboid x1="-1"  y1="45" z1="-1"  x2="'''+str(arena_width+1)+'''" y2="45" z2="-1" type="gold_block" />			  <!-- Bottom wall from start position -->
+                          <DrawCuboid x1="-1"  y1="45" z1="-1"  x2="-1" y2="45" z2="'''+str(arena_height)+'''" type="gold_block" />           <!-- Right wall from start position -->
+                          <DrawCuboid x1="-1"  y1="45" z1="'''+str(arena_height)+'''"  x2="'''+str(arena_width+1)+'''" y2="45" z2="'''+str(arena_height)+'''" type="gold_block" />           <!-- Top wall from start position -->
+                
+                          <!-- Goal -->
+                          <DrawBlock  x="''' + str(arena_width) + '''"   y="45"  z="''' + str(arena_height-1) + '''" type="lapis_block" />
+                		  
+                          <!-- Enemies -->
+                          '''+ add_enemies(arena_width,arena_height, no_items) + '''
+                		  
+                      </DrawingDecorator>
+                      <ServerQuitFromTimeUp timeLimitMs="2000000"/>
+                      <ServerQuitWhenAnyAgentFinishes/>
+                    </ServerHandlers>
+                  </ServerSection>
+                
+                  <AgentSection mode="Survival">
+                    <Name>Master</Name>
+                    <AgentStart>
+                      <Placement x="4.5" y="46.0" z="1.5" pitch="70" yaw="0"/>
+                      <Inventory>
+                      </Inventory>
+                    </AgentStart>
+                    <AgentHandlers>
+                      <ObservationFromFullStats/>
+                      <VideoProducer want_depth="false">
+                          <Width>640</Width>
+                          <Height>480</Height>
+                      </VideoProducer>
+                      <DiscreteMovementCommands>
+                          <ModifierList type="deny-list">
+                            <command>attack</command>
+                          </ModifierList>
+                      </DiscreteMovementCommands>
+                      <RewardForTouchingBlockType>
+                        <Block reward="-1000.0" type="lava" behaviour="onceOnly"/>
+                        <Block reward="1000.0" type="lapis_block" behaviour="onceOnly"/>
+                        <Block reward="-1000.0" type="red_sandstone" behaviour="onceOnly"/>
+                        <Block reward="-75.0" type="gold_block"/>
+                      </RewardForTouchingBlockType>
+                      <RewardForSendingCommand reward="-1"/>
+                      <RewardForCollectingItem>
+                        <Item reward="100.0" type="diamond" />
+                      </RewardForCollectingItem>
+                      <AgentQuitFromTouchingBlockType>
+                          <Block type="lava" />
+                          <Block type="lapis_block" />
+                          <Block type="red_sandstone" />
+                		  <Block type="stone" />
+                      </AgentQuitFromTouchingBlockType>
+                    </AgentHandlers>
+                  </AgentSection>
+                
+                </Mission>'''
+    return xml
+
+
 
 agent_host = MalmoPython.AgentHost()
 
@@ -319,11 +484,14 @@ try:
 except KeyError:
     print("MALMO_XSD_PATH not set? Check environment.")
     exit(1)
+    
 mission_file = os.path.abspath(os.path.join(schema_dir, '..',
                                             'sample_missions', 'cliff_walking_1.xml'))  # Integration test path
+
 if not os.path.exists(mission_file):
     mission_file = os.path.abspath(os.path.join(schema_dir, '..',
                                                 'Sample_missions', 'cliff_walking_1.xml'))  # Install path
+
 if not os.path.exists(mission_file):
     print("Could not find cliff_walking_1.xml under MALMO_XSD_PATH")
     exit(1)
@@ -339,18 +507,23 @@ agent_host.addOptionalFloatArgument('gamma', 'Discount factor.', 1.0)
 agent_host.addOptionalFlag('load_model', 'Load initial model from model_file.')
 agent_host.addOptionalStringArgument('model_file', 'Path to the initial model file', '')
 agent_host.addOptionalFlag('debug', 'Turn on debugging.')
+agent_host.addOptionalIntArgument('x','The width of the arena.',18)
+agent_host.addOptionalIntArgument('y','The width of the arena.',16)
+agent_host.addOptionalIntArgument('items','Number of items to be spawned.',3)
 
 malmoutils.parse_command_line(agent_host)
 
 # -- set up the python-side drawing -- #
 scale = 40
-world_x = 25
-world_y = 20
+world_x = agent_host.getIntArgument('x')
+world_y = agent_host.getIntArgument('y')
 root = tk.Tk()
 root.wm_title("Q-table")
 canvas = tk.Canvas(root, width=world_x * scale, height=world_y * scale, borderwidth=0, highlightthickness=0, bg="black")
 canvas.grid()
 root.update()
+
+num_items = agent_host.getIntArgument('items')
 
 if agent_host.receivedArgument("test"):
     num_maps = 1
@@ -372,19 +545,12 @@ for imap in range(num_maps):
         root=root)
 
     # -- set up the mission -- #
-    mission_file = agent_host.getStringArgument('mission_file')
-    with open(mission_file, 'r') as f:
-        print("Loading mission from %s" % mission_file)
-        mission_xml = f.read()
-        my_mission = MalmoPython.MissionSpec(mission_xml, True)
+    mission_xml = XML_generator(x=world_x,y=world_y,items=num_items)
+    my_mission = MalmoPython.MissionSpec(mission_xml, True)
     my_mission.removeAllCommandHandlers()
     my_mission.allowAllDiscreteMovementCommands()
     my_mission.requestVideo(640, 480)
     my_mission.setViewpoint(1)
-    # add holes for interest
-    #for z in range(2, 12, 2):
-    #    x = random.randint(1, 3)
-    #    my_mission.drawBlock(x, 45, z, "lava")
 
     my_clients = MalmoPython.ClientPool()
     my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10000))  # add Minecraft machines here as available
@@ -411,6 +577,7 @@ for imap in range(num_maps):
                     print("Error starting mission:", e)
                     exit(1)
                 else:
+                    print("here?")
                     time.sleep(2.5)
 
         print("Waiting for the mission to start", end=' ')

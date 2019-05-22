@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<Mission xmlns="http://ProjectMalmo.microsoft.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+  <About>
+    <Summary>Cliff walking mission based on Sutton and Barto.</Summary>
+  </About>
+  
+  <ModSettings>
+    <MsPerTick>1</MsPerTick>
+  </ModSettings>
+
+  <ServerSection>
+      <ServerInitialConditions>
+            <Time>
+                <StartTime>6000</StartTime>
+                <AllowPassageOfTime>false</AllowPassageOfTime>
+            </Time>
+            <Weather>clear</Weather>
+            <AllowSpawning>false</AllowSpawning>
+      </ServerInitialConditions>
+    <ServerHandlers>
+      <FlatWorldGenerator generatorString="3;7,220*1,5*3,2;3;,biome_1"/>
+      <DrawingDecorator>
+        <!-- coordinates for cuboid are inclusive -->
+          <DrawCuboid x1="-2" y1="46" z1="-2" x2="20" y2="50" z2="18" type="air" />            <!-- limits of our arena -->
+          <DrawCuboid x1="-2" y1="45" z1="-2" x2="20" y2="45" z2="18" type="lava" />           <!-- lava floor -->
+          <DrawCuboid x1="-1"  y1="44" z1="0"  x2="18" y2="45" z2="16" type="sandstone" />      <!-- floor of the arena -->
+		  
+          <DrawBlock  x="4"   y="45"  z="1"  type="cobblestone" />                           <!-- the starting marker -->
+		  
+          <!-- Start Walls -->
+          <!-- Boundary -->
+          <DrawCuboid x1="7"  y1="46" z1="-1"  x2="19" y2="46" z2="17" type="stone" />           <!-- Left wall from start position -->
+          <DrawCuboid x1=" 6"  y1="45" z1="0 "  x2="19" y2="45" z2="17" type="gold_block" />
+          <DrawCuboid x1="-1"  y1="45" z1="0"  x2="18" y2="45" z2="0" type="gold_block" />			  <!-- Bottom wall from start position -->
+          <DrawCuboid x1="-1"  y1="45" z1="-1"  x2="-1" y2="45" z2="17" type="gold_block" />        <!-- Right wall from start position -->
+          <DrawCuboid x1="14"  y1="46" z1="17"  x2="19" y2="46" z2="17" type="stone" />          <!-- Top wall from start position -->
+          <!-- Checkpoint walls -->
+          <DrawCuboid x1="2"  y1="45" z1="5"  x2="18" y2="45" z2="5" type="gold_block" />  <!-- first row wall-->
+          <DrawCuboid x1="4"  y1="45" z1="9"  x2="18" y2="45" z2="9" type="gold_block" />  <!-- second row wall-->
+          <DrawCuboid x1="1"  y1="45" z1="9"  x2="-1" y2="45" z2="9" type="gold_block" />  <!-- third row wall-->
+          <DrawCuboid x1="4"  y1="45" z1="9"  x2="4" y2="45" z2="14" type="gold_block" />  <!-- third row columns-->
+          <DrawCuboid x1="2"  y1="45" z1="9"  x2="2" y2="45" z2="14" type="gold_block" />  <!-- third row columns-->
+          
+          <!--High reward checkpoints -->
+          <DrawItem     x="3" y="46" z="9" type="diamond" />
+          <DrawBlock    x="3" y="45" z="9" type="glowstone" />
+          
+          <DrawItem     x="2" y="46" z="4" type="diamond" />
+          <DrawBlock    x="2" y="45" z="4" type="glowstone" />
+
+          <!-- Destination -->
+          <DrawBlock   x="4"   y="45"  z="16" type="lapis_block" />                           <!-- the destination marker -->
+          <DrawItem     x="4"   y="46"  z="16" type="diamond" />                               <!-- another destination marker -->
+          
+          <!-- Enemy Section -->
+          <DrawCuboid  x1="2"  y1="45" z1="1"  x2="0"   y2="45" z2="3" type="red_sandstone" />
+          <DrawEntity  x="2"   y="45"  z="2"  type="Villager" />    <!-- Enemy -->
+          
+          <DrawCuboid  x1="3"  y1="45" z1="5"  x2="2"   y2="45" z2="6" type="red_sandstone" />
+          <DrawEntity  x="3"   y="45"  z="6"  type="Villager" />    <!-- Enemy -->
+          <DrawCuboid  x1="0"  y1="45" z1="15"  x2="1"   y2="45" z2="16" type="red_sandstone" />
+          <DrawEntity  x="0"   y="45"  z="16"  type="Villager" />    <!-- Enemy -->
+          
+      </DrawingDecorator>
+      <ServerQuitFromTimeUp timeLimitMs="1000000"/>
+      <ServerQuitWhenAnyAgentFinishes/>
+    </ServerHandlers>
+  </ServerSection>
+
+  <AgentSection mode="Survival">
+    <Name>The Dungeon Master</Name>
+    <AgentStart>
+      <Placement x="4.5" y="46.0" z="1.5" pitch="80" yaw="0"/>
+    </AgentStart>
+    <AgentHandlers>
+      <ObservationFromFullStats/>
+      <VideoProducer want_depth="false">
+          <Width>640</Width>
+          <Height>480</Height>
+      </VideoProducer>
+      <DiscreteMovementCommands>
+          <ModifierList type="deny-list">
+            <command>attack</command>
+          </ModifierList>
+      </DiscreteMovementCommands>
+      <RewardForTouchingBlockType>
+        <Block reward="-100.0" type="lava" behaviour="onceOnly"/>
+        <Block reward="100.0" type="lapis_block" behaviour="onceOnly"/>
+        <Block reward="-100.0" type="red_sandstone" behaviour="onceOnly"/>
+        <Block reward="-75.0" type="gold_block"/>
+        <Block reward="5.0" type="glowstone" behaviour="onceOnly"/>
+      </RewardForTouchingBlockType>
+      <RewardForSendingCommand reward="-1"/>
+      <AgentQuitFromTouchingBlockType>
+          <Block type="lava" />
+          <Block type="lapis_block" />
+          <Block type="red_sandstone" />
+		  <Block type="stone" />
+      </AgentQuitFromTouchingBlockType>
+    </AgentHandlers>
+  </AgentSection>
+
+</Mission>
