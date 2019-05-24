@@ -3,8 +3,10 @@ layout: default
 title: Status
 ---
 ## Video
-TBA
-Minimum: 1200 x 720 (720p)
+Click below to view the video...
+
+[![IMAGE ALT TEXT HERE](http://img.youtube.com/vi/vYLZZKRD03M/0.jpg)](http://www.youtube.com/watch?v=vYLZZKRD03M)
+
 
 ## Project Summary
 Have you ever wanted to be the best stealth dungeon master without knowing the rules? Learn with our own agents as we take on the dungeon master’s puzzles and learn how to reach the treasure at the end of the path while sneaking past various beasts and monsters!
@@ -23,6 +25,10 @@ For our evaluation, we used qualitative and quantitative methods to determine if
 Our agent can be observed in two ways:
 1. A Q-table, which shows the position of the agent in the world and the resulting reward of going in one of four discrete directions, the reward being denoted by color.
 2. The game screen/canvas, which shows the agent traversing a physical representation of the world. 
+
+![Q-table](images/Runs/Run1/run800.jpg)
+
+
 One can see the Q-table representation as an x-ray of the game canvas. Eventually, the Q-table will clearly show the most optimal path from the starting block to the goal block, denoted by a chain of green dots. Visually, the agent can be deemed as optimal if it takes very little time to find the goal, as shown in our time remaining counter in the canvas.
 
 ### _Quantitative Methods_
@@ -36,10 +42,10 @@ Finally, our rewards system looks as follows:
 
 | Block Type    | Reward        |
 | ------------- |--------------:| 
-| Lava (Instant Death)     | -1000 |
+| Lava (Instant death)     | -1000 |
 | Lapis Block (Goal)     | 1000      | 
-| Red Sandstone (Vision Radius) | -1000     |  
-| Gold Block | -75 |
+| Red Sandstone (Vision radius) | -1000     |  
+| Gold Block (Wall) | -75 |
 | Any Block (add to all values above) | -1 |
 
 
