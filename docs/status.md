@@ -26,8 +26,7 @@ Our agent can be observed in two ways:
 1. A Q-table, which shows the position of the agent in the world and the resulting reward of going in one of four discrete directions, the reward being denoted by color.
 2. The game screen/canvas, which shows the agent traversing a physical representation of the world. 
 
-![Q-table](images/Runs/Run1/run800.jpg)
-
+<img src="images/Runs/Run1/run800.jpg" alt="Q-table" width="100%" />
 
 One can see the Q-table representation as an x-ray of the game canvas. Eventually, the Q-table will clearly show the most optimal path from the starting block to the goal block, denoted by a chain of green dots. Visually, the agent can be deemed as optimal if it takes very little time to find the goal, as shown in our time remaining counter in the canvas.
 
@@ -53,7 +52,7 @@ Finally, our rewards system looks as follows:
 
 Below is a figure that shows the cumulative reward of a sample run over 1600 iterations. For this run you can see the agent converges to the max reward farily quickly.
 
-![Cumulative Rewards](images/Runs/Run2/Reward_graph.png)
+<img src="images/Runs/Run2/Reward_graph.png" alt="Cumulative Rewards" width="100%" />
 
 
 ## Remaining Goals and Challenges
