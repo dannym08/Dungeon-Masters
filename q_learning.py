@@ -46,6 +46,8 @@ import sys
 import time
 import malmoutils
 
+import matplotlib.pyplot as plt
+
 if sys.version_info[0] == 2:
     # Workaround for https://github.com/PythonCharmers/python-future/issues/262
     import Tkinter as tk
@@ -436,7 +438,7 @@ def XML_generator(x,y,items):
                   <AgentSection mode="Survival">
                     <Name>Master</Name>
                     <AgentStart>
-                      <Placement x="4.5" y="46.0" z="1.5" pitch="70" yaw="0"/>
+                      <Placement x="4.5" y="46.0" z="1.5" pitch="30" yaw="0"/>
                       <Inventory>
                       </Inventory>
                     </AgentStart>
@@ -528,7 +530,7 @@ num_items = agent_host.getIntArgument('items')
 if agent_host.receivedArgument("test"):
     num_maps = 1
 else:
-    num_maps = 30000
+    num_maps = 1
 
 for imap in range(num_maps):
 
@@ -559,7 +561,7 @@ for imap in range(num_maps):
     agentID = 0
     expID = 'tabular_q_learning'
 
-    num_repeats = 150
+    num_repeats = 1600
     cumulative_rewards = []
     for i in range(num_repeats):
 
@@ -603,3 +605,10 @@ for imap in range(num_maps):
     print()
     print("Cumulative rewards for all %d runs:" % num_repeats)
     print(cumulative_rewards)
+
+    x_axis = [i + 1 for i in range(num_repeats)]
+    plt.plot(x_axis, cumulative_rewards)
+    plt.xlabel("iterations", fontsize = 16)
+    plt.ylabel("Cumulative reward", fontsize = 16)
+    plt.show()
+    input()
