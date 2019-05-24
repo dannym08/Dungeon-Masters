@@ -49,6 +49,10 @@ Finally, our rewards system looks as follows:
 | Gold Block (Wall) | -75 |
 | Any Block (add to all values above) | -1 |
 
+Below is a figure that shows the cumulative reward of a sample run over 1600 iterations. For this run you can see the agent converges to the max reward farily quickly.
+
+![Cumulative Rewards](images/Runs/Run2/Reward_graph.png)
+
 
 ## Remaining Goals and Challenges
 TBA
