@@ -36,6 +36,7 @@ One can see the Q-table representation as an x-ray of the game canvas. Eventuall
 Our agent can be observed through recorded methods provided by Malmo. For each iteration, Malmo saves a .tgz file which contains information including but not limited to rewards and observations after all steps. Using a Python program to read this data, we conceived a simple graph, where:
 1. x is the number of iterations, and y is the number of steps taken until the mission ended.
 2. x is the number of iterations, and y is the resulting reward at the end of the mission.
+
 Inferring from the graphs, one can notice the steady decline in the number of steps as Q-learning decides to take the best-policy path to the goal over time. Also, notice that the resulting reward remains constant at “99” early on when it is determined where the guaranteed path to the goal is.
 
 Finally, our rewards system looks as follows:
