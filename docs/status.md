@@ -49,14 +49,12 @@ Finally, our rewards system looks as follows:
 | Getting the diamond (Goal) | 100 |
 | Red Sandstone (Vision radius) | -1000     |  
 | Gold Block (Wall) | -75 |
-| Any Block (add to all values above) | -1 |
-
-<<<<<<< HEAD
-<br/>
-=======
+| Any Block (add to all values above) | -1 |  
 
 
->>>>>>> parent of 69fabc1... Updated Status.md
+
+
+
 Below is a figure that shows the cumulative reward of a sample run over 1600 iterations. For this run you can see the agent converges to the max reward farily quickly.
 
 <img src="images/Runs/Run2/Reward_graph.png" alt="Cumulative Rewards" width="100%" />
