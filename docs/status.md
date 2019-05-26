@@ -41,6 +41,7 @@ Inferring from the graphs, one can notice the steady decline in the number of st
 
 Finally, our rewards system looks as follows:
 
+
 | Block Type    | Reward        |
 | ------------- |--------------:|
 | Lava (Instant death)     | -1000 |
