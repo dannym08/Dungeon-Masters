@@ -46,7 +46,7 @@ import sys
 import time
 import malmoutils
 
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 if sys.version_info[0] == 2:
     # Workaround for https://github.com/PythonCharmers/python-future/issues/262
@@ -394,7 +394,7 @@ def XML_generator(x,y,items):
                   </About>
                   
                   <ModSettings>
-                    <MsPerTick>1</MsPerTick>
+                    <MsPerTick>50</MsPerTick>
                   </ModSettings>
                 
                   <ServerSection>
@@ -416,6 +416,9 @@ def XML_generator(x,y,items):
                           <DrawCuboid x1="-1"  y1="44" z1="0"  x2="'''+str(arena_width)+'''" y2="45" z2="'''+str(arena_height)+'''" type="sandstone" />      <!-- floor of the arena -->
                 		  
                           <DrawBlock  x="4"   y="45"  z="1"  type="cobblestone" />                           <!-- the starting marker -->
+                          
+                          <!-- Some Rewards -->
+                          <DrawItem x="5" y="45" z="1" type="diamond" />
                     		  
                           <!-- Boundary -->
                           <DrawCuboid x1="'''+str(arena_width+1)+'''"  y1="45" z1="-1"  x2="'''+str(arena_width+1)+'''" y2="45" z2="'''+str(arena_height)+'''" type="gold_block" />           <!-- Left wall from start position -->
@@ -428,9 +431,12 @@ def XML_generator(x,y,items):
                 		  
                           <!-- Enemies -->
                           '''+ add_enemies(arena_width,arena_height, no_items) + '''
+                          
+                          <!-- Items -->
+                          '''+ add_items(arena_width,arena_height, 5, no_items)+ '''
                 		  
                       </DrawingDecorator>
-                      <ServerQuitFromTimeUp timeLimitMs="2000000"/>
+                      <ServerQuitFromTimeUp timeLimitMs="15000"/>
                       <ServerQuitWhenAnyAgentFinishes/>
                     </ServerHandlers>
                   </ServerSection>
@@ -438,7 +444,7 @@ def XML_generator(x,y,items):
                   <AgentSection mode="Survival">
                     <Name>Master</Name>
                     <AgentStart>
-                      <Placement x="4.5" y="46.0" z="1.5" pitch="30" yaw="0"/>
+                      <Placement x="4.5" y="46.0" z="1.5" pitch="60" yaw="0"/>
                       <Inventory>
                       </Inventory>
                     </AgentStart>
@@ -461,7 +467,7 @@ def XML_generator(x,y,items):
                       </RewardForTouchingBlockType>
                       <RewardForSendingCommand reward="-1"/>
                       <RewardForCollectingItem>
-                        <Item reward="100.0" type="diamond" />
+                        <Item reward="5.0" type="diamond" />
                       </RewardForCollectingItem>
                       <AgentQuitFromTouchingBlockType>
                           <Block type="lava" />
@@ -606,9 +612,9 @@ for imap in range(num_maps):
     print("Cumulative rewards for all %d runs:" % num_repeats)
     print(cumulative_rewards)
 
-    x_axis = [i + 1 for i in range(num_repeats)]
-    plt.plot(x_axis, cumulative_rewards)
-    plt.xlabel("iterations", fontsize = 16)
-    plt.ylabel("Cumulative reward", fontsize = 16)
-    plt.show()
-    input()
+    #x_axis = [i + 1 for i in range(num_repeats)]
+    #plt.plot(x_axis, cumulative_rewards)
+    #plt.xlabel("iterations", fontsize = 16)
+    #plt.ylabel("Cumulative reward", fontsize = 16)
+    #plt.show()
+    #input()
