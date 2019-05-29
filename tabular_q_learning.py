@@ -489,6 +489,8 @@ def XML_generator(x,y):
                     <Name>Master</Name>
                     <AgentStart>
                       <Placement x="4.5" y="46.0" z="1.5" pitch="70" yaw="0"/>
+                      <Inventory>
+                      </Inventory>
                     </AgentStart>
                     <AgentHandlers>
                       <ObservationFromFullStats/>
