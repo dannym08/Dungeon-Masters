@@ -124,13 +124,14 @@ class ReplayBuffer:
 
 class deepQAgent(object):
     """Deep Q-learning agent for discrete state/action spaces."""
-    def __init__(self, actions=[], learning_rate=0.1, tau=0.1, epsilon=0.2, gamma=0.99, debug=False, canvas=None, root=None):
+    def __init__(self, actions=[], learning_rate=0.1, tau=0.1, epsilon=1.0, gamma=0.99, debug=False, canvas=None, root=None):
         
         self.buffer_size = int(1e5)             # replay buffer size
         self.batch_size = 64                    # minibatch size
         self.learning_rate = learning_rate      # learning rate
         self.tau = tau                          # for soft update of target parameters
-        self.epsilon= epsilon                   # epsilon-greedy
+        self.epsilon= epsilon                   # inital epsilon-greedy
+        self.epsilon_decay = 0.99               # how quickly to decay epsilon
         self.gamma = gamma                      # discount factor
         self.update_every = 4                   # how often we updated the nn
         self.action_size = len(actions)
@@ -398,6 +399,13 @@ class deepQAgent(object):
         # update Q values
         state = torch.from_numpy(state).float().unsqueeze(0)#.to(self.device)
         self.local_model.eval()
+        
+            
+        # update epsilon for next run
+        self.epsilon *= self.epsilon_decay
+        print()
+        print('updated epsilon: ', self.epsilon)
+        print()
 
         return total_reward
 
@@ -550,7 +558,7 @@ agent_host.addOptionalFloatArgument('alpha',
 agent_host.addOptionalFloatArgument('tau',
                                     'Soft update of target parameters.', 0.1)
 agent_host.addOptionalFloatArgument('epsilon',
-                                    'Exploration rate of the Q-learning agent.', 0.01)
+                                    'Exploration rate of the Q-learning agent.', 1.0)
 agent_host.addOptionalFloatArgument('gamma', 'Discount factor.', 0.99)
 agent_host.addOptionalFlag('load_model', 'Load initial model from model_file.')
 agent_host.addOptionalStringArgument('model_file', 'Path to the initial model file', '')
