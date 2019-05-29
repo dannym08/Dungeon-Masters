@@ -41,6 +41,14 @@ import time
 import malmoutils
 
 
+from collections import namedtuple, deque
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+
+
 enemies = 5
 
 
@@ -57,14 +65,88 @@ if save_images:
 malmoutils.fix_print()
 
 
-class TabQAgent(object):
-    """Tabular Q-learning agent for discrete state/action spaces."""
+class DQN(nn.Module):
+    def __init__(self):
+        super(DQN, self).__init__()
+        
+        # D_in = input dimension = 2: x-cor, z-cor
+        self.D_in = 2
+        # H = hidden dimension, use a number between input and output dimension
+        self.H = 3
+        # D_out = output dimension = 4: 4 directions or movment
+        self.D_out = 4
+        
+        self.input_layer = nn.Linear(self.D_in, self.H)
+        self.hidden_layer = nn.Linear(self.H, self.H)
+        self.output_layer = nn.Linear(self.H, self.D_out)
+        
+    def forward(self, x):
+            h_relu = F.relu(self.input_layer(x))
+            h_relu = F.relu(self.hidden_layer(h_relu))
+            y_pred = self.output_layer(h_relu)
+            return y_pred
 
-    def __init__(self, actions=[], epsilon=0.1, alpha=0.1, gamma=1.0, debug=False, canvas=None, root=None):
-        self.epsilon = epsilon
-        self.alpha = alpha
-        self.gamma = gamma
-        self.training = True
+class ReplayBuffer:
+    """Fixed-size buffer to store experience tuples."""
+    
+    def __init__(self, buffer_size, batch_size):
+        """Initialize a ReplayBuffer object.
+        Params
+        ======
+            buffer_size (int): maximum size of buffer
+            batch_size (int): size of each training batch
+            seed (int): random seed
+        """
+        self.memory = deque(maxlen=buffer_size)  
+        self.batch_size = batch_size
+        self.experience = namedtuple("Experience", field_names=["state", "action", "reward", "next_state"])
+    
+    def add(self, state, action, reward, next_state):
+        """Add a new experience to memory."""
+        exp = self.experience(state, action, reward, next_state)
+        self.memory.append(exp)
+    
+    def sample(self):
+        """Randomly sample a batch of experiences from memory."""
+        experiences = random.sample(self.memory, k=self.batch_size)
+
+        states = torch.from_numpy(np.vstack([exp.state for exp in experiences if exp is not None])).float()#.to(deepQAgent.device)
+        actions = torch.from_numpy(np.vstack([exp.action for exp in experiences if exp is not None])).long()#.to(deepQAgent.device)
+        rewards = torch.from_numpy(np.vstack([exp.reward for exp in experiences if exp is not None])).float()#.to(deepQAgent.device)
+        next_states = torch.from_numpy(np.vstack([exp.next_state for exp in experiences if exp is not None])).float()#.to(deepQAgent.device)
+        
+        return (states, actions, rewards, next_states)
+
+    def __len__(self):
+        """Return the current size of internal memory."""
+        return len(self.memory)
+    
+
+class deepQAgent(object):
+    """Deep Q-learning agent for discrete state/action spaces."""
+    def __init__(self, actions=[], learning_rate=0.1, tau=0.1, epsilon=0.2, gamma=0.99, debug=False, canvas=None, root=None):
+        
+        self.buffer_size = int(1e5)             # replay buffer size
+        self.batch_size = 64                    # minibatch size
+        self.learning_rate = learning_rate      # learning rate
+        self.tau = tau                          # for soft update of target parameters
+        self.epsilon= epsilon                   # epsilon-greedy
+        self.gamma = gamma                      # discount factor
+        self.update_every = 4                   # how often we updated the nn
+        self.action_size = len(actions)
+        
+        # running PyTorch on cpu
+        self.device = torch.device('cpu')
+        
+        # create network
+        self.local_model = DQN()#.to(self.device)
+        self.target_model = DQN()#.to(self.device)
+        self.optimizer = optim.Adam(self.local_model.parameters(), lr=self.learning_rate)
+        
+        # create memory
+        self.memory = ReplayBuffer(self.buffer_size, self.batch_size)
+        # Initialize time step (for updating every UPDATE_EVERY steps)
+        self.t_step = 0
 
         self.logger = logging.getLogger(__name__)
         if debug:
@@ -75,93 +157,113 @@ class TabQAgent(object):
         self.logger.addHandler(logging.StreamHandler(sys.stdout))
 
         self.actions = actions
-        self.q_table = {}
+        
         self.canvas = canvas
         self.root = root
 
         self.rep = 0
+    
+    def step(self, state, action, reward, next_state):
+        # Save experience in replay memory
+        self.memory.add(state, action, reward, next_state)
+        
+        # Learn every UPDATE_EVERY time steps.
+        self.t_step = (self.t_step + 1) % self.update_every
+        if self.t_step == 0:
+            # If enough samples are available in memory, get random subset and learn
+            if len(self.memory) > self.batch_size:
+                experiences = self.memory.sample()
+                self.learn(experiences, self.gamma)
+    
+    def learn(self, experiences, gamma):
+        """Update value parameters using given batch of experience tuples.
+        Params
+        ======
+            experiences (Tuple[torch.Tensor]): tuple of (s, a, r, s') tuples 
+            gamma (float): discount factor
+        """
+        states, actions, rewards, next_states = experiences
 
-    def loadModel(self, model_file):
-        """load q table from model_file"""
-        with open(model_file) as f:
-            self.q_table = json.load(f)
+        # Get max predicted Q values (for next states) from target model
+        next_targets = self.target_model(next_states).detach().max(1)[0].unsqueeze(1)
+        # Compute Q targets for current states 
+        targets = rewards + (gamma * next_targets)
 
-    def training(self):
-        """switch to training mode"""
-        self.training = True
+        # Get expected Q values from local model
+        expected_q = self.local_model(states).gather(1, actions)
 
-    def evaluate(self):
-        """switch to evaluation mode (no training)"""
-        self.training = False
+        # Compute loss
+        loss = F.mse_loss(expected_q, targets)
+        # Minimize the loss
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
 
-    def act(self, world_state, agent_host, current_r):
-        """take 1 action in response to the current world state"""
+        # ------------------- update target network ------------------- #
+        self.soft_update(self.local_model, self.target_model, self.tau)   
+    
+    def soft_update(self, local_model, target_model, tau):
+        """Soft update model parameters.
+        θ_target = τ*θ_local + (1 - τ)*θ_target
+        """
+        print()
+        print('target params: ', target_model.parameters())
+        print('local params: ', local_model.parameters())
+        print()
+        for target_param, local_param in zip(target_model.parameters(), local_model.parameters()):
+            target_param.data.copy_(tau*local_param.data + (1.0-tau)*target_param.data)
+            
+    def act(self, world_state, agent_host):
+        """Returns actions for given state as per current policy."""
         
         obs_text = world_state.observations[-1].text
         obs = json.loads(obs_text)  # most recent observation
-        print(obs)
-        print(current_r)
+#        print(obs)
         self.logger.debug(obs)
         if not u'XPos' in obs or not u'ZPos' in obs:
             self.logger.error("Incomplete observation received: %s" % obs_text)
             return 0
-        current_s = "%d:%d" % (int(obs[u'XPos']), int(obs[u'ZPos']))
+        current_s = "%d,%d" % (int(obs[u'XPos']), int(obs[u'ZPos']))
         self.logger.debug("State: %s (x = %.2f, z = %.2f)" % (current_s, float(obs[u'XPos']), float(obs[u'ZPos'])))
-        if current_s not in self.q_table:
-            self.q_table[current_s] = ([0] * len(self.actions))
-
-        # update Q values
-        if self.training and self.prev_s is not None and self.prev_a is not None:
-            old_q = self.q_table[self.prev_s][self.prev_a]
-            self.q_table[self.prev_s][self.prev_a] = old_q + self.alpha * (current_r
-                                                                           + self.gamma * max(
-                        self.q_table[current_s]) - old_q)
-
-        self.drawQ(curr_x=int(obs[u'XPos']), curr_y=int(obs[u'ZPos']))
-
-        #Special: if current_r is -76 (wall) then we go backwards
-        if current_r == -76:
-            # send the selected action
-            # actionSet = ["movenorth 1", "movesouth 1", "movewest 1", "moveeast 1"]
-            if self.prev_a == 0:
-                a = 1
-            elif self.prev_a == 1:
-                a = 0
-            elif self.prev_a == 2:
-                a = 3
-            elif self.prev_a == 3:
-                a = 2
-            agent_host.sendCommand(self.actions[a])
-            self.prev_s = current_s
-            self.prev_a = a
-            return 100
-
-        # otherwise, do normal q learning
-        # select the next action
-        rnd = random.random()
-        if rnd < self.epsilon:
-            a = random.randint(0, len(self.actions) - 1)
-            self.logger.info("Random action: %s" % self.actions[a])
+        
+        state = np.array([int(obs[u'XPos']),
+                          int(obs[u'ZPos'])])
+        # update Q values        
+        state = torch.from_numpy(state).float().unsqueeze(0)#.to(self.device)
+        self.local_model.eval()
+        with torch.no_grad():
+            action_values = self.local_model(state)
+        self.local_model.train()
+        
+        # Epsilon-greedy action selection
+        if random.random() > self.epsilon:
+            action = np.argmax(action_values.cpu().data.numpy())
         else:
-            m = max(self.q_table[current_s])
-            self.logger.debug("Current values: %s" % ",".join(str(x) for x in self.q_table[current_s]))
-            l = list()
-            for x in range(0, len(self.actions)):
-                if self.q_table[current_s][x] == m:
-                    l.append(x)
-            y = random.randint(0, len(l) - 1)
-            a = l[y]
-            self.logger.info("Taking q action: %s" % self.actions[a])
-
+            action = random.choice(np.arange(self.action_size))
+            
         # send the selected action
-        agent_host.sendCommand(self.actions[a])
+        agent_host.sendCommand(self.actions[action])
         self.prev_s = current_s
-        self.prev_a = a
-
-        return current_r
-
-    def run(self, agent_host):
-        """run the agent on the world"""
+        self.prev_a = action
+        
+        pre_state = state
+        obs_text = world_state.observations[-1].text
+        obs = json.loads(obs_text)  # most recent observation
+        print(obs)
+        self.logger.debug(obs)
+        if not u'XPos' in obs or not u'ZPos' in obs:
+            self.logger.error("Incomplete observation received: %s" % obs_text)
+            return 0
+        current_s = "%d,%d" % (int(obs[u'XPos']), int(obs[u'ZPos']))
+        self.logger.debug("State: %s (x = %.2f, z = %.2f)" % (current_s, float(obs[u'XPos']), float(obs[u'ZPos'])))
+        
+        state = np.array([int(obs[u'XPos']),
+                          int(obs[u'ZPos'])])
+            
+        return pre_state, state
+    
+    def run(self, agenthost):
+        """Run agent on current world"""
 
         total_reward = 0
         current_r = 0
@@ -185,7 +287,7 @@ class TabQAgent(object):
         if not world_state.is_mission_running:
             return 0  # mission already ended
 
-        assert len(world_state.video_frames) > 0, 'No video frames!?'
+        assert len(world_state.video_frames) > 0, 'No video frames!?' 
 
         obs = json.loads(world_state.observations[-1].text)
         prev_x = obs[u'XPos']
@@ -201,7 +303,7 @@ class TabQAgent(object):
             image.save('rep_' + str(self.rep).zfill(3) + '_saved_frame_' + str(iFrame).zfill(4) + '.png')
 
         # take first action
-        total_reward += self.act(world_state, agent_host, current_r)
+        self.act(world_state, agent_host)
 
         require_move = True
         check_expected_position = True
@@ -282,57 +384,22 @@ class TabQAgent(object):
                 prev_x = curr_x
                 prev_z = curr_z
                 # act
-                total_reward += self.act(world_state, agent_host, current_r)
+                pre_state, state = self.act(world_state, agent_host)
+                agent.step(pre_state, self.prev_a, current_r, state)
+                
+                total_reward += current_r
 
         # process final reward
         self.logger.debug("Final reward: %d" % current_r)
         total_reward += current_r
-
+        
+        state = np.array([int(obs[u'XPos']),
+                          int(obs[u'ZPos'])])
         # update Q values
-        if self.training and self.prev_s is not None and self.prev_a is not None:
-            old_q = self.q_table[self.prev_s][self.prev_a]
-            self.q_table[self.prev_s][self.prev_a] = old_q + self.alpha * (current_r - old_q)
-
-        self.drawQ()
+        state = torch.from_numpy(state).float().unsqueeze(0)#.to(self.device)
+        self.local_model.eval()
 
         return total_reward
-
-    def drawQ(self, curr_x=None, curr_y=None):
-        if self.canvas is None or self.root is None:
-            return
-        self.canvas.delete("all")
-        action_inset = 0.1
-        action_radius = 0.1
-        curr_radius = 0.2
-        action_positions = [(0.5, 1 - action_inset), (0.5, action_inset), (1 - action_inset, 0.5), (action_inset, 0.5)]
-        # (NSWE to match action order)
-        min_value = -20
-        max_value = 20
-        for x in range(world_x):
-            for y in range(world_y):
-                s = "%d:%d" % (x, y)
-                self.canvas.create_rectangle((world_x - 1 - x) * scale, (world_y - 1 - y) * scale,
-                                             (world_x - 1 - x + 1) * scale, (world_y - 1 - y + 1) * scale,
-                                             outline="#fff", fill="#000")
-                for action in range(4):
-                    if not s in self.q_table:
-                        continue
-                    value = self.q_table[s][action]
-                    color = int(255 * (value - min_value) / (max_value - min_value))  # map value to 0-255
-                    color = max(min(color, 255), 0)  # ensure within [0,255]
-                    color_string = '#%02x%02x%02x' % (255 - color, color, 0)
-                    self.canvas.create_oval((world_x - 1 - x + action_positions[action][0] - action_radius) * scale,
-                                            (world_y - 1 - y + action_positions[action][1] - action_radius) * scale,
-                                            (world_x - 1 - x + action_positions[action][0] + action_radius) * scale,
-                                            (world_y - 1 - y + action_positions[action][1] + action_radius) * scale,
-                                            outline=color_string, fill=color_string)
-        if curr_x is not None and curr_y is not None:
-            self.canvas.create_oval((world_x - 1 - curr_x + 0.5 - curr_radius) * scale,
-                                    (world_y - 1 - curr_y + 0.5 - curr_radius) * scale,
-                                    (world_x - 1 - curr_x + 0.5 + curr_radius) * scale,
-                                    (world_y - 1 - curr_y + 0.5 + curr_radius) * scale,
-                                    outline="#fff", fill="#fff")
-        self.root.update()
 
 def add_enemies(arena_width,arena_height):
     xml = ""
@@ -399,6 +466,7 @@ def XML_generator(x,y):
                 
                           <DrawBlock  x="''' + str(arena_width) + '''"   y="45"  z="''' + str(arena_height-1) + '''" type="lapis_block" />                           <!-- the destination marker -->
                           <DrawItem   x="''' + str(arena_width) + '''"   y="46"  z="''' + str(arena_height-1) + '''" type="diamond" />                               <!-- another destination marker -->
+                          <DrawItem   x="6"   y="46"  z="0" type="diamond" />  
                 		  
                           <!-- Enemies -->
                           '''+ add_enemies(arena_width,arena_height) + '''
@@ -416,6 +484,12 @@ def XML_generator(x,y):
                     </AgentStart>
                     <AgentHandlers>
                       <ObservationFromFullStats/>
+                      <ObservationFromGrid>
+                          <Grid name="vision">
+                            <min x="-2" y="-1" z="-2"/>
+                            <max x="2" y="-1" z="2"/>
+                          </Grid>
+                      </ObservationFromGrid>
                       <VideoProducer want_depth="false">
                           <Width>640</Width>
                           <Height>480</Height>
@@ -426,7 +500,7 @@ def XML_generator(x,y):
                           </ModifierList>
                       </DiscreteMovementCommands>
                       <RewardForTouchingBlockType>
-                        <Block reward="-100.0" type="lava" behaviour="onceOnly"/>
+                        <Block reward="-1000.0" type="lava" behaviour="onceOnly"/>
                         <Block reward="1000.0" type="lapis_block" behaviour="onceOnly"/>
                         <Block reward="-100.0" type="red_sandstone" behaviour="onceOnly"/>
                         <Block reward="-500.0" type="stone" behaviour="onceOnly"/>
@@ -473,9 +547,11 @@ agent_host.addOptionalStringArgument('mission_file',
                                      'Path/to/file from which to load the mission.', mission_file)
 agent_host.addOptionalFloatArgument('alpha',
                                     'Learning rate of the Q-learning agent.', 0.1)
+agent_host.addOptionalFloatArgument('tau',
+                                    'Soft update of target parameters.', 0.1)
 agent_host.addOptionalFloatArgument('epsilon',
                                     'Exploration rate of the Q-learning agent.', 0.01)
-agent_host.addOptionalFloatArgument('gamma', 'Discount factor.', 1.0)
+agent_host.addOptionalFloatArgument('gamma', 'Discount factor.', 0.99)
 agent_host.addOptionalFlag('load_model', 'Load initial model from model_file.')
 agent_host.addOptionalStringArgument('model_file', 'Path to the initial model file', '')
 agent_host.addOptionalFlag('debug', 'Turn on debugging.')
@@ -485,7 +561,7 @@ agent_host.addOptionalIntArgument('y','The width of the arena.',16)
 malmoutils.parse_command_line(agent_host)
 
 # -- set up the python-side drawing -- #
-scale = 40
+scale = 50
 world_x = agent_host.getIntArgument('x')
 world_y = agent_host.getIntArgument('y')
 root = tk.Tk()
@@ -504,14 +580,23 @@ for imap in range(num_maps):
     # -- set up the agent -- #
     actionSet = ["movenorth 1", "movesouth 1", "movewest 1", "moveeast 1"]
 
-    agent = TabQAgent(
-        actions=actionSet,
-        epsilon=agent_host.getFloatArgument('epsilon'),
-        alpha=agent_host.getFloatArgument('alpha'),
-        gamma=agent_host.getFloatArgument('gamma'),
-        debug=agent_host.receivedArgument("debug"),
-        canvas=canvas,
-        root=root)
+#    agent = TabQAgent(
+#        actions=actionSet,
+#        epsilon=agent_host.getFloatArgument('epsilon'),
+#        alpha=agent_host.getFloatArgument('alpha'),
+#        gamma=agent_host.getFloatArgument('gamma'),
+#        debug=agent_host.receivedArgument("debug"),
+#        canvas=canvas,
+#        root=root)
+    
+    agent = deepQAgent( actions=actionSet,
+                        learning_rate=agent_host.getFloatArgument('alpha'),
+                        tau=agent_host.getFloatArgument('tau'),
+                        epsilon=agent_host.getFloatArgument('epsilon'),
+                        gamma=agent_host.getFloatArgument('gamma'),
+                        debug=agent_host.receivedArgument("debug"),
+                        canvas=canvas,
+                        root=root)
 
     # -- set up the mission -- #
     mission_xml = XML_generator(x=world_x,y=world_y)
@@ -526,9 +611,9 @@ for imap in range(num_maps):
 
     max_retries = 3
     agentID = 0
-    expID = 'tabular_q_learning'
+    expID = 'deep_q_learning'
 
-    num_repeats = 150
+    num_repeats = 1500
     cumulative_rewards = []
     for i in range(num_repeats):
 
@@ -565,7 +650,7 @@ for imap in range(num_maps):
         cumulative_rewards += [cumulative_reward]
 
         # -- clean up -- #
-        time.sleep(0.5)  # (let the Mod reset)
+        time.sleep(2)  # (let the Mod reset)
 
     print("Done.")
 
