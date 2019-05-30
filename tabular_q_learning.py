@@ -49,7 +49,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 
-enemies = 0
+enemies = 5
 
 
 if sys.version_info[0] == 2:
@@ -131,7 +131,7 @@ class deepQAgent(object):
         self.learning_rate = learning_rate      # learning rate
         self.tau = tau                          # for soft update of target parameters
         self.epsilon= epsilon                   # inital epsilon-greedy
-        self.epsilon_decay = 0.99               # how quickly to decay epsilon
+        self.epsilon_decay = 0.999               # how quickly to decay epsilon
         self.gamma = gamma                      # discount factor
         self.update_every = 4                   # how often we updated the nn
         self.action_size = len(actions)
@@ -427,6 +427,7 @@ class deepQAgent(object):
             
         # update epsilon for next run
         self.epsilon *= self.epsilon_decay
+        self.epsilon = max(0.2, self.epsilon)
         print()
         print('updated epsilon: ', self.epsilon)
         print()
@@ -516,7 +517,7 @@ def XML_generator(x,y):
                           '''+ add_enemies(arena_width, arena_height) + '''
                           
                           <!-- Items -->
-                          '''+ add_items(arena_width, arena_height, 10) + '''
+                          '''+ add_items(arena_width, arena_height, 5) + '''
                 		  
                       </DrawingDecorator>
                       <ServerQuitFromTimeUp timeLimitMs="30000"/>
