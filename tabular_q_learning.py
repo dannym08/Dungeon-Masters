@@ -49,7 +49,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 
-enemies = 5
+enemies = 0
 
 
 if sys.version_info[0] == 2:
@@ -219,7 +219,7 @@ class deepQAgent(object):
         
         obs_text = world_state.observations[-1].text
         obs = json.loads(obs_text)  # most recent observation
-#        print(obs)
+        print(obs)
         self.logger.debug(obs)
         if not u'XPos' in obs or not u'ZPos' in obs:
             self.logger.error("Incomplete observation received: %s" % obs_text)
@@ -235,7 +235,7 @@ class deepQAgent(object):
         with torch.no_grad():
             action_values = self.local_model(state)
         self.local_model.train()
-        
+
         # Epsilon-greedy action selection
         if random.random() > self.epsilon:
             action = np.argmax(action_values.cpu().data.numpy())
@@ -250,7 +250,7 @@ class deepQAgent(object):
         pre_state = state
         obs_text = world_state.observations[-1].text
         obs = json.loads(obs_text)  # most recent observation
-        print(obs)
+        #print(obs)
         self.logger.debug(obs)
         if not u'XPos' in obs or not u'ZPos' in obs:
             self.logger.error("Incomplete observation received: %s" % obs_text)
@@ -260,10 +260,10 @@ class deepQAgent(object):
         
         state = np.array([int(obs[u'XPos']),
                           int(obs[u'ZPos'])])
-            
+
         return pre_state, state
     
-    def run(self, agenthost):
+    def run(self, agent_host):
         """Run agent on current world"""
 
         total_reward = 0
@@ -384,11 +384,35 @@ class deepQAgent(object):
                 #input("Press Enter to continue...")
                 prev_x = curr_x
                 prev_z = curr_z
+
                 # act
                 pre_state, state = self.act(world_state, agent_host)
                 agent.step(pre_state, self.prev_a, current_r, state)
-                
+
+                ### SPECIAL ###
+                # Here, we can replace our current spot with a normal block
+                # to indicate that the item has been picked up.
+                print(current_r)
+                #if current_r == 99:  # Reward of grass is 100 - 1
+                if obs[u'vision'][12] == "grass":
+                    # my_mission.drawBlock(int(obs[u'XPos']),45,int(obs[u'ZPos']),"sandstone")
+                    temp = self.prev_s.split(",")
+                    #print(temp)
+                    #print("grass detected via reward!")
+                    result = "chat /fill " + str(temp[0]) + " 45 " + str(temp[1]) + " " + str(temp[0]) + " 45 " + str(
+                        temp[1]) \
+                             + " minecraft:sandstone 0 replace minecraft:grass"
+                    #print(result)
+                    # agent_host.sendCommand('chat /kill @a')
+                    agent_host.sendCommand(result)
+                    # agent_host.sendCommand("turn 1")
+                    #input()
+
+                ### END ###
+
                 total_reward += current_r
+
+
 
         # process final reward
         self.logger.debug("Final reward: %d" % current_r)
@@ -429,8 +453,20 @@ def add_enemies(arena_width,arena_height):
         xml += '''<DrawCuboid x1="''' + str(x) + '''" y1="45" z1="''' + str(z) + '''" x2="''' + str(x-2) + '''" y2="45" z2="''' + str(z+2) + '''" type="red_sandstone"/>'''
         xml += '''<DrawEntity x="''' + str(x-0.5) + '''" y="45" z="''' + str(z+1.5) + '''"  type="Villager" />'''
     return xml
-    
-    
+
+
+def add_items(arena_width, arena_height, items_count=1):
+    xml = ""
+    for i in range(items_count):
+
+        if True:
+            x = random.randint(0, arena_width)
+            z = random.randint(0, arena_height - 1)
+
+        xml += '''<DrawItem x="''' + str(x) + '''" y="46" z="''' + str(z) + '''" type="diamond" />''' + \
+            '''<DrawBlock x="''' + str(x) + '''" y="45" z="''' + str(z) + '''" type="grass" />'''
+    return xml
+
 def XML_generator(x,y):
     arena_width=x-1
     arena_height=y
@@ -443,7 +479,7 @@ def XML_generator(x,y):
                   </About>
                   
                   <ModSettings>
-                    <MsPerTick>1</MsPerTick>
+                    <MsPerTick>50</MsPerTick>
                   </ModSettings>
                 
                   <ServerSection>
@@ -477,10 +513,13 @@ def XML_generator(x,y):
                           <DrawItem   x="6"   y="46"  z="0" type="diamond" />  
                 		  
                           <!-- Enemies -->
-                          '''+ add_enemies(arena_width,arena_height) + '''
+                          '''+ add_enemies(arena_width, arena_height) + '''
+                          
+                          <!-- Items -->
+                          '''+ add_items(arena_width, arena_height, 10) + '''
                 		  
                       </DrawingDecorator>
-                      <ServerQuitFromTimeUp timeLimitMs="2000000"/>
+                      <ServerQuitFromTimeUp timeLimitMs="30000"/>
                       <ServerQuitWhenAnyAgentFinishes/>
                     </ServerHandlers>
                   </ServerSection>
@@ -494,6 +533,8 @@ def XML_generator(x,y):
                     </AgentStart>
                     <AgentHandlers>
                       <ObservationFromFullStats/>
+                      <ChatCommands/>
+                      <ObservationFromChat/>
                       <ObservationFromGrid>
                           <Grid name="vision">
                             <min x="-2" y="-1" z="-2"/>
@@ -515,6 +556,7 @@ def XML_generator(x,y):
                         <Block reward="-100.0" type="red_sandstone" behaviour="onceOnly"/>
                         <Block reward="-500.0" type="stone" behaviour="onceOnly"/>
                         <Block reward="-75.0" type="gold_block"/>
+                        <Block reward="100" type="grass" />
                       </RewardForTouchingBlockType>
                       <RewardForSendingCommand reward="-1"/>
                       <AgentQuitFromTouchingBlockType>
@@ -612,6 +654,7 @@ for imap in range(num_maps):
     mission_xml = XML_generator(x=world_x,y=world_y)
     my_mission = MalmoPython.MissionSpec(mission_xml, True)
     my_mission.removeAllCommandHandlers()
+    my_mission.allowAllChatCommands()
     my_mission.allowAllDiscreteMovementCommands()
     my_mission.requestVideo(640, 480)
     my_mission.setViewpoint(1)
