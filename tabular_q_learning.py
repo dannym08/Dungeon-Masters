@@ -356,18 +356,23 @@ class deepQAgent(object):
 #        print(action_values.max(1)[0].max(1)[1].view(1, 1))
 #        print(np.average(action_values.cpu().data.numpy(),axis=1))
 #        print(np.argmax(np.average(action_values.cpu().data.numpy(),axis=1)))
-        if random.random() > self.epsilon:
-            # t.max(1) will return largest column value of each row.
-            # second column on max result is index of where max element was
-            # found, so we pick action with the larger expected reward.
-            print("Optimal action: ",end="")
-            action = action_values.max(1)[0].max(1)[1].view(1, 1)
-#            action = np.average(action_values.cpu().data.numpy(),axis=1)
-#            action = np.argmax(action_values.cpu().data.numpy())
-        else:
-            print("Random action: ",end="")
-            action = torch.tensor([[random.randrange(self.action_size)]])
-#            action = random.choice(np.arange(self.action_size))
+
+        while True:
+            if random.random() > self.epsilon:
+                # t.max(1) will return largest column value of each row.
+                # second column on max result is index of where max element was
+                # found, so we pick action with the larger expected reward.
+                print("Optimal action: ", end="")
+                action = action_values.max(1)[0].max(1)[1].view(1, 1)
+#                action = np.average(action_values.cpu().data.numpy(),axis=1)
+#                action = np.argmax(action_values.cpu().data.numpy())
+            else:
+                print("Random action: ", end="")
+                action = torch.tensor([[random.randrange(self.action_size)]])
+#                action = random.choice(np.arange(self.action_size))
+            if( (action == 0 and vision[1] != 'gold_block') or (action == 1 and vision[7] != 'gold_block') or
+                (action == 2 and vision[3] != 'gold_block') or (action == 3 and vision[5] != 'gold_block') ):
+                break
 
 #        print(np.argmax(action_values.cpu().data.numpy()))
         print(action)
