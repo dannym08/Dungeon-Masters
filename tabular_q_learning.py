@@ -157,7 +157,7 @@ class deepQAgent(object):
         self.epsilon= epsilon                   # inital epsilon-greedy
         self.epsilon_decay = 0.995               # how quickly to decay epsilon
         self.gamma = gamma                      # discount factor
-        self.update_every = 32                   # how often we updated the nn
+        self.update_every = 8                   # how often we updated the nn
         self.action_size = len(actions)
         
         # running PyTorch on cpu
@@ -284,7 +284,11 @@ class deepQAgent(object):
             
     def act(self, world_state, agent_host):
         """Returns actions for given state as per current policy."""
-        
+
+
+        time.sleep(0.1)
+
+
         discovery_reward = 0
         obs_text = world_state.observations[-1].text
         obs = json.loads(obs_text)  # most recent observation
@@ -298,7 +302,7 @@ class deepQAgent(object):
         
 #        print()
 #        print("before command")
-#        print(obs)
+        print(obs)
         
         xpos = obs[u'XPos']
         zpos = obs[u'ZPos']
@@ -314,6 +318,8 @@ class deepQAgent(object):
             if block not in self.block_list:
                 self.block_list.append(block)
             encode.append(self.block_list.index(block))
+        print("Encoded list: "+str(encode))
+        print("Torch.Tensor: "+str(torch.tensor(encode)))
         input_state = self.one_hot(torch.tensor(encode), len(encode)).float().unsqueeze(0)
 #        emb = self.one_hot(torch.tensor(encode), len(encode))
 #        emb_np = emb.detach().numpy()
@@ -558,7 +564,8 @@ class deepQAgent(object):
                 # if current_r == 99:  # Reward of grass is 100 - 1
                 if obs[u'vision'][floor(len(obs[u'vision']) / 2)] == "grass":
                     # my_mission.drawBlock(int(obs[u'XPos']),45,int(obs[u'ZPos']),"sandstone")
-                    temp = self.prev_s.split(",")
+                    #temp = self.prev_s.split(",")
+                    temp = prev_x, prev_z
                     # print(temp)
                     # print("grass detected via reward!")
                     result = "chat /fill " + str(temp[0]) + " 45 " + str(temp[1]) + " " + str(temp[0]) + " 45 " + str(
@@ -744,9 +751,9 @@ def XML_generator(x,y):
                       </DiscreteMovementCommands>
                       <RewardForTouchingBlockType>
                         <Block reward="-10000.0" type="lava" behaviour="onceOnly"/>
-                        <Block reward="100.0" type="lapis_block" behaviour="onceOnly"/>
+                        <Block reward="10000.0" type="lapis_block" behaviour="onceOnly"/>
                         <Block reward="-100.0" type="red_sandstone" behaviour="onceOnly"/>
-                        <Block reward="-500.0" type="gold_block"/>
+                        <Block reward="0.0" type="gold_block"/>
                         <Block reward="100" type="grass" />
                       </RewardForTouchingBlockType>
                       <RewardForSendingCommand reward="-1"/>
