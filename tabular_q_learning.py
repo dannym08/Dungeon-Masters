@@ -49,8 +49,9 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 from math import floor
+from copy import deepcopy
 
-enemies = 0
+enemies = 2
 
 
 if sys.version_info[0] == 2:
@@ -133,9 +134,9 @@ class deepQAgent(object):
         self.learning_rate = learning_rate      # learning rate
         self.tau = tau                          # for soft update of target parameters
         self.epsilon= epsilon                   # inital epsilon-greedy
-        self.epsilon_decay = 0.99               # how quickly to decay epsilon
+        self.epsilon_decay = 0.995               # how quickly to decay epsilon
         self.gamma = gamma                      # discount factor
-        self.update_every = 4                   # how often we updated the nn
+        self.update_every = 32                   # how often we updated the nn
         self.action_size = len(actions)
         
         # running PyTorch on cpu
@@ -221,7 +222,7 @@ class deepQAgent(object):
         
         obs_text = world_state.observations[-1].text
         obs = json.loads(obs_text)  # most recent observation
-        print(obs)
+        #print(obs)
         self.logger.debug(obs)
         if not u'XPos' in obs or not u'ZPos' in obs:
             self.logger.error("Incomplete observation received: %s" % obs_text)
@@ -233,7 +234,7 @@ class deepQAgent(object):
         #                  int(obs[u'ZPos'])])
 
         state = np.array(encode_observations(obs[u'vision']))
-        state_orig = state
+        state_orig = deepcopy(state)
         #obs[u'vision'][12]
 
         # update Q values
@@ -245,16 +246,19 @@ class deepQAgent(object):
 
         # Epsilon-greedy action selection
         if random.random() > self.epsilon:
+            print("optimal action: ",end="")
             action = np.argmax(action_values.cpu().data.numpy())
+            print(action)
         else:
+            print("random action: ",end="")
             action = random.choice(np.arange(self.action_size))
-            
+            print(action)
         # send the selected action
         agent_host.sendCommand(self.actions[action])
         self.prev_s = current_s
         self.prev_a = action
         
-        pre_state = state
+        pre_state = deepcopy(state)
         obs_text = world_state.observations[-1].text
         obs = json.loads(obs_text)  # most recent observation
         #print(obs)
@@ -393,7 +397,11 @@ class deepQAgent(object):
                 prev_z = curr_z
 
                 # act
-                pre_state, state = self.act(world_state, agent_host)
+                try:
+                    pre_state = deepcopy(state)
+                    pre_state2, state = self.act(world_state, agent_host)
+                except UnboundLocalError:
+                    pre_state, state = self.act(world_state, agent_host)
                 agent.step(pre_state, self.prev_a, current_r, state)
 
                 ### SPECIAL ###
@@ -491,7 +499,8 @@ def encode_observations(vision:list=list()):
     result = []
     for item in vision:
         result.append(encode_dict[item])
-    print(result)
+    print(str(vision[0:3])+"\n"+str(vision[3:6])+"\n"+str(vision[6:9]))
+    print(str(result[0:3])+"\n"+str(result[3:6])+"\n"+str(result[6:9]))
     return result
 
 def XML_generator(x,y):
@@ -580,9 +589,9 @@ def XML_generator(x,y):
                       <RewardForTouchingBlockType>
                         <Block reward="-1000.0" type="lava" behaviour="onceOnly"/>
                         <Block reward="1000.0" type="lapis_block" behaviour="onceOnly"/>
-                        <Block reward="-100.0" type="red_sandstone" behaviour="onceOnly"/>
+                        <Block reward="-1000.0" type="red_sandstone" behaviour="onceOnly"/>
                         <Block reward="-500.0" type="stone" behaviour="onceOnly"/>
-                        <Block reward="0.0" type="gold_block"/>
+                        <Block reward="-75.0" type="gold_block"/>
                         <Block reward="100" type="grass" />
                       </RewardForTouchingBlockType>
                       <RewardForSendingCommand reward="-1"/>
