@@ -48,6 +48,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
+from math import floor
 
 enemies = 0
 
@@ -71,10 +72,10 @@ class DQN(nn.Module):
         
         # D_in = input dimension = 2: x-cor, z-cor
         #self.D_in = 2
-        self.D_in = 25
+        self.D_in = 9
         # H = hidden dimension, use a number between input and output dimension
         self.H = 3
-        # D_out = output dimension = 4: 4 directions or movment
+        # D_out = output dimension = 4: 4 directions or movement
         self.D_out = 4
         
         self.input_layer = nn.Linear(self.D_in, self.H)
@@ -132,7 +133,7 @@ class deepQAgent(object):
         self.learning_rate = learning_rate      # learning rate
         self.tau = tau                          # for soft update of target parameters
         self.epsilon= epsilon                   # inital epsilon-greedy
-        self.epsilon_decay = 0.999               # how quickly to decay epsilon
+        self.epsilon_decay = 0.99               # how quickly to decay epsilon
         self.gamma = gamma                      # discount factor
         self.update_every = 4                   # how often we updated the nn
         self.action_size = len(actions)
@@ -400,7 +401,7 @@ class deepQAgent(object):
                 # to indicate that the item has been picked up.
                 print(current_r)
                 #if current_r == 99:  # Reward of grass is 100 - 1
-                if obs[u'vision'][12] == "grass":
+                if obs[u'vision'][floor(len(obs[u'vision'])/2)] == "grass":
                     # my_mission.drawBlock(int(obs[u'XPos']),45,int(obs[u'ZPos']),"sandstone")
                     temp = self.prev_s.split(",")
                     #print(temp)
@@ -484,6 +485,7 @@ def encode_observations(vision:list=list()):
         "gold_block": 5,
         "grass": 6,
         "cobblestone": 7,
+        "lava": 1,
     }
 
     result = []
@@ -541,7 +543,7 @@ def XML_generator(x,y):
                           '''+ add_enemies(arena_width, arena_height) + '''
                           
                           <!-- Items -->
-                          '''+ add_items(arena_width, arena_height, 5) + '''
+                          '''+ add_items(arena_width, arena_height, agent_host.getIntArgument('i')) + '''
                 		  
                       </DrawingDecorator>
                       <ServerQuitFromTimeUp timeLimitMs="30000"/>
@@ -562,8 +564,8 @@ def XML_generator(x,y):
                       <ObservationFromChat/>
                       <ObservationFromGrid>
                           <Grid name="vision">
-                            <min x="-2" y="-1" z="-2"/>
-                            <max x="2" y="-1" z="2"/>
+                            <min x="-1" y="-1" z="-1"/>
+                            <max x="1" y="-1" z="1"/>
                           </Grid>
                       </ObservationFromGrid>
                       <VideoProducer want_depth="false">
@@ -634,6 +636,7 @@ agent_host.addOptionalStringArgument('model_file', 'Path to the initial model fi
 agent_host.addOptionalFlag('debug', 'Turn on debugging.')
 agent_host.addOptionalIntArgument('x','The width of the arena.',18)
 agent_host.addOptionalIntArgument('y','The width of the arena.',16)
+agent_host.addOptionalIntArgument('i','The total number of small items in the arena (except the goal)', 5)
 
 malmoutils.parse_command_line(agent_host)
 
