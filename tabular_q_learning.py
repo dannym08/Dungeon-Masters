@@ -49,7 +49,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 
-enemies = 5
+enemies = 0
 
 
 if sys.version_info[0] == 2:
@@ -70,7 +70,8 @@ class DQN(nn.Module):
         super(DQN, self).__init__()
         
         # D_in = input dimension = 2: x-cor, z-cor
-        self.D_in = 2
+        #self.D_in = 2
+        self.D_in = 25
         # H = hidden dimension, use a number between input and output dimension
         self.H = 3
         # D_out = output dimension = 4: 4 directions or movment
@@ -227,9 +228,14 @@ class deepQAgent(object):
         current_s = "%d,%d" % (int(obs[u'XPos']), int(obs[u'ZPos']))
         self.logger.debug("State: %s (x = %.2f, z = %.2f)" % (current_s, float(obs[u'XPos']), float(obs[u'ZPos'])))
         
-        state = np.array([int(obs[u'XPos']),
-                          int(obs[u'ZPos'])])
-        # update Q values        
+        #state = np.array([int(obs[u'XPos']),
+        #                  int(obs[u'ZPos'])])
+
+        state = np.array(encode_observations(obs[u'vision']))
+        state_orig = state
+        #obs[u'vision'][12]
+
+        # update Q values
         state = torch.from_numpy(state).float().unsqueeze(0)#.to(self.device)
         self.local_model.eval()
         with torch.no_grad():
@@ -258,10 +264,10 @@ class deepQAgent(object):
         current_s = "%d,%d" % (int(obs[u'XPos']), int(obs[u'ZPos']))
         self.logger.debug("State: %s (x = %.2f, z = %.2f)" % (current_s, float(obs[u'XPos']), float(obs[u'ZPos'])))
         
-        state = np.array([int(obs[u'XPos']),
-                          int(obs[u'ZPos'])])
+        #state = np.array([int(obs[u'XPos']),
+        #                  int(obs[u'ZPos'])])
 
-        return pre_state, state
+        return pre_state, state_orig
     
     def run(self, agent_host):
         """Run agent on current world"""
@@ -468,6 +474,24 @@ def add_items(arena_width, arena_height, items_count=1):
             '''<DrawBlock x="''' + str(x) + '''" y="45" z="''' + str(z) + '''" type="grass" />'''
     return xml
 
+def encode_observations(vision:list=list()):
+    encode_dict = {
+        "sandstone": 0,
+        "flowing_lava": 1,
+        "lapis_block": 2,
+        "red_sandstone": 3,
+        "stone": 4,
+        "gold_block": 5,
+        "grass": 6,
+        "cobblestone": 7,
+    }
+
+    result = []
+    for item in vision:
+        result.append(encode_dict[item])
+    print(result)
+    return result
+
 def XML_generator(x,y):
     arena_width=x-1
     arena_height=y
@@ -556,7 +580,7 @@ def XML_generator(x,y):
                         <Block reward="1000.0" type="lapis_block" behaviour="onceOnly"/>
                         <Block reward="-100.0" type="red_sandstone" behaviour="onceOnly"/>
                         <Block reward="-500.0" type="stone" behaviour="onceOnly"/>
-                        <Block reward="-75.0" type="gold_block"/>
+                        <Block reward="0.0" type="gold_block"/>
                         <Block reward="100" type="grass" />
                       </RewardForTouchingBlockType>
                       <RewardForSendingCommand reward="-1"/>
