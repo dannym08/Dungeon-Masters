@@ -140,9 +140,9 @@ class deepQAgent(object):
         self.device = torch.device('cpu')
         
         # create network
-        self.local_model = DQN()#.to(self.device)
+        self.policy_model = DQN()#.to(self.device)
         self.target_model = DQN()#.to(self.device)
-        self.optimizer = optim.Adam(self.local_model.parameters(), lr=self.learning_rate)
+        self.optimizer = optim.Adam(self.policy_model.parameters(), lr=self.learning_rate)
         
         # create memory
         self.memory = ReplayBuffer(self.buffer_size, self.batch_size)
@@ -191,7 +191,7 @@ class deepQAgent(object):
         targets = rewards + (gamma * next_targets)
 
         # Get expected Q values from local model
-        expected_q = self.local_model(states).gather(1, actions)
+        expected_q = self.policy_model(states).gather(1, actions)
 
         # Compute loss
         loss = F.mse_loss(expected_q, targets)
@@ -201,18 +201,18 @@ class deepQAgent(object):
         self.optimizer.step()
 
         # ------------------- update target network ------------------- #
-        self.soft_update(self.local_model, self.target_model, self.tau)   
+        self.soft_update(self.policy_model, self.target_model, self.tau)   
     
-    def soft_update(self, local_model, target_model, tau):
+    def soft_update(self, policy_model, target_model, tau):
         """Soft update model parameters.
-        θ_target = τ*θ_local + (1 - τ)*θ_target
+        θ_target = τ*θ_policy + (1 - τ)*θ_target
         """
         print()
         print('target params: ', target_model.parameters())
-        print('local params: ', local_model.parameters())
+        print('local params: ', policy_model.parameters())
         print()
-        for target_param, local_param in zip(target_model.parameters(), local_model.parameters()):
-            target_param.data.copy_(tau*local_param.data + (1.0-tau)*target_param.data)
+        for target_param, policy_param in zip(target_model.parameters(), policy_model.parameters()):
+            target_param.data.copy_(tau*policy_param.data + (1.0-tau)*target_param.data)
             
     def act(self, world_state, agent_host):
         """Returns actions for given state as per current policy."""
@@ -231,10 +231,10 @@ class deepQAgent(object):
                           int(obs[u'ZPos'])])
         # update Q values        
         state = torch.from_numpy(state).float().unsqueeze(0)#.to(self.device)
-        self.local_model.eval()
+        self.policy_model.eval()
         with torch.no_grad():
-            action_values = self.local_model(state)
-        self.local_model.train()
+            action_values = self.policy_model(state)
+        self.policy_model.train()
         
         # Epsilon-greedy action selection
         if random.random() > self.epsilon:
@@ -398,7 +398,7 @@ class deepQAgent(object):
                           int(obs[u'ZPos'])])
         # update Q values
         state = torch.from_numpy(state).float().unsqueeze(0)#.to(self.device)
-        self.local_model.eval()
+        self.policy_model.eval()
         
             
         # update epsilon for next run
@@ -411,19 +411,21 @@ class deepQAgent(object):
 
 def add_enemies(arena_width,arena_height):
     xml = ""
-    # add more enemies
-    used_pos = set((arena_width, arena_height))
+    # add more enemies, but avoid end goal
+    used_pos = set((arena_width, arena_height-3))
+    
+    smaller_dim = min(arena_width, arena_height)
+    enemies = (smaller_dim-1)//3
+    
     for i in range(enemies):
-        x = random.randint(2, arena_width)
-        z = random.randint(0, arena_height-2)
-        if z == 1 and x in range(4, 4+3):
-            x = random.randint(1, arena_width-2)
-        
-        while (x,z) in used_pos:
+        while True:
             x = random.randint(2, arena_width)
-            z = random.randint(0, arena_height-2)
-            if (z == 1  or z == 0) and x in range(4, 4+3):
-                x = random.randint(1, arena_width-2)
+            z = random.randint(0, arena_height-4)
+            while (z <= 2 ) and x in range(3, 4+3):
+                x = random.randint(2, arena_width)
+                z = random.randint(0, arena_height-4)
+            if (x,z) not in used_pos:
+                break
         
         used_pos.add((x,z))
         xml += '''<DrawCuboid x1="''' + str(x) + '''" y1="45" z1="''' + str(z) + '''" x2="''' + str(x-2) + '''" y2="45" z2="''' + str(z+2) + '''" type="red_sandstone"/>'''
@@ -565,8 +567,8 @@ agent_host.addOptionalFloatArgument('gamma', 'Discount factor.', 0.99)
 agent_host.addOptionalFlag('load_model', 'Load initial model from model_file.')
 agent_host.addOptionalStringArgument('model_file', 'Path to the initial model file', '')
 agent_host.addOptionalFlag('debug', 'Turn on debugging.')
-agent_host.addOptionalIntArgument('x','The width of the arena.',18)
-agent_host.addOptionalIntArgument('y','The width of the arena.',16)
+agent_host.addOptionalIntArgument('x','The width of the arena.',10)
+agent_host.addOptionalIntArgument('y','The width of the arena.',10)
 
 malmoutils.parse_command_line(agent_host)
 
