@@ -318,7 +318,7 @@ class deepQAgent(object):
 #        input_state = self.one_hot(torch.tensor(encode), len(encode)).flatten()       .float()
 #        print(input_state)
         visits = list()
-        print(self.visited)
+#        print(self.visited)
         for surrounding in [(-1,-1), (-1, 0), (-1, 1), (0, -1), (0, 0), (0, 1), (1, -1), (1, 0), (1,1)]:
             if (int(curr_x) + surrounding[0], int(curr_z) + surrounding[1]) not in self.visited:
                 visits.append(0)
@@ -326,7 +326,7 @@ class deepQAgent(object):
                 visits.append(1)
         
         emb = self.one_hot(torch.tensor(encode), len(self.block_list))
-        print(emb)
+#        print(emb)
 #        input_state = emb.flatten()
 #        print(input_state)
 #        emb_np = emb.detach().numpy()
@@ -591,7 +591,7 @@ class deepQAgent(object):
 #                input_state = self.one_hot(torch.tensor(encode), len(encode)).flatten()       .float()
 #                print(input_state)
                 visits = list()
-                print(self.visited)
+#                print(self.visited)
 #                print(self.visited)
                 if (int(curr_x), int(curr_z)) not in self.visited:
                     discovery_reward = 5
@@ -606,14 +606,14 @@ class deepQAgent(object):
                         visits.append(1)
                 
                 emb = self.one_hot(torch.tensor(encode), len(self.block_list))
-                print(emb)
+#                print(emb)
 #                next_state = emb.flatten()
 #                print(next_state)
 #                next_state = torch.cat((emb.flatten(), torch.as_tensor(visits).float()))
                 next_state = torch.cat((torch.cat((emb.flatten(),
                                                    torch.as_tensor(visits).float())),
                                         torch.as_tensor(self.moves).float()))
-                print(next_state)
+#                print(next_state)
 #                state_info = list()
 #                state_info.append(vision)
 #                encode = list()
@@ -659,7 +659,7 @@ class deepQAgent(object):
                 prev_z = curr_z
                 # place move into memory and update NN if necessary
                 agent.step(state, action, current_r, next_state)
-                print("reward for this step: ", current_r)
+#                print("reward for this step: ", current_r)
 
                 
                 total_reward += current_r
