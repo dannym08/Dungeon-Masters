@@ -292,7 +292,6 @@ class deepQAgent(object):
             
     def act(self, world_state, agent_host):
         """Returns actions for given state as per current policy."""
-        time.sleep(0.1)
         visits = list()
         obs_text = world_state.observations[-1].text
         obs = json.loads(obs_text)  # most recent observation
@@ -314,7 +313,12 @@ class deepQAgent(object):
         curr_x = xpos
         curr_z = zpos
         
-        vision = obs['vision']
+        while True:
+            try:
+                vision = obs['vision']
+                break
+            except KeyError:
+                continue
         encode = list()
         for block in vision:
             encode.append(self.block_list.index(block))
@@ -402,8 +406,10 @@ class deepQAgent(object):
 #        print(np.average(action_values.cpu().data.numpy(),axis=1))
 #        print(np.argmax(np.average(action_values.cpu().data.numpy(),axis=1)))
 
+        _i = 0
+        print("Test Knowledge: "+str(test_knowledge))
         while True:
-            if random.random() > self.epsilon:
+            if ((random.random() > self.epsilon) or (test_knowledge and _i < 5)):
                 # t.max(1) will return largest column value of each row.
                 # second column on max result is index of where max element was
                 # found, so we pick action with the larger expected reward.
@@ -418,6 +424,9 @@ class deepQAgent(object):
             if( (action == 0 and vision[1] != 'gold_block') or (action == 1 and vision[7] != 'gold_block') or
                 (action == 2 and vision[3] != 'gold_block') or (action == 3 and vision[5] != 'gold_block') ):
                 break
+            else:
+                print("abort (wall)")
+            _i += 1
         
         self.moves.append(action)
 #        self.recent_actions.append(action)
@@ -453,7 +462,7 @@ class deepQAgent(object):
             
         return input_state, action
     
-    def run(self, agent_host):
+    def run(self, agent_host, test_knowledge):
         """Run agent on current world"""
 
         total_reward = 0
@@ -1024,7 +1033,9 @@ for imap in range(num_maps):
         print()
 
         # -- run the agent in the world -- #
-        cumulative_reward = agent.run(agent_host)
+        test_knowledge = True if i % 5 == 0 else False
+
+        cumulative_reward = agent.run(agent_host, test_knowledge)
         print('Cumulative reward: %d' % cumulative_reward)
         cumulative_rewards += [cumulative_reward]
 
