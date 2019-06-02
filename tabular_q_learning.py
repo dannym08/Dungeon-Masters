@@ -154,7 +154,7 @@ class deepQAgent(object):
         self.learning_rate = learning_rate      # learning rate
         self.tau = tau                          # for soft update of target parameters
         self.epsilon= epsilon                   # inital epsilon-greedy
-        self.epsilon_decay = 0.999              # how quickly to decay epsilon
+        self.epsilon_decay = 0.00007              # how quickly to decay epsilon
         self.gamma = gamma                      # discount factor
         self.update_every = 8                   # how often we updated the nn
         self.action_size = len(actions)
@@ -642,8 +642,10 @@ class deepQAgent(object):
         self.policy_model.eval()
 
         # update epsilon for next run but don't let epsilon get below 0.01
-        if self.epsilon > 0.01:
-            self.epsilon *= self.epsilon_decay
+        if self.epsilon > 0.01 or True: #override for test
+            self.epsilon -= self.epsilon_decay
+        if self.epsilon < 0:
+            self.epsilon = 0
         print()
         print('updated epsilon: ', self.epsilon)
         print()
@@ -912,7 +914,7 @@ for imap in range(num_maps):
     agentID = 0
     expID = 'deep_q_learning'
 
-    num_repeats = 1500
+    num_repeats = 15000
     cumulative_rewards = []
     for i in range(num_repeats):
 
