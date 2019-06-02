@@ -72,7 +72,8 @@ class DQN(nn.Module):
         # D_in = input dimension = 9 * 5: a five number encoding for each of the block types
         # plus a boolean for each block to denote if they have been visited
         # plus the previous six moves it has made so that it "perceive" movement
-        self.D_in = 9 * 5 + 9 + 6
+        # plus the 2 corrdinates of the agent's location
+        self.D_in = 9 * 5 + 9 + 6 + 2
         # H = hidden dimension, use a number between input and output dimension
         self.H = 50
         # D_out = output dimension = 4: 4 directions of move
@@ -335,9 +336,10 @@ class deepQAgent(object):
 #        print(emb.flatten())
 #        print(torch.cat((emb.flatten(), torch.as_tensor(visits).float())))
 #        input_state = torch.cat((emb.flatten(), torch.as_tensor(visits).float()))
-        input_state = torch.cat((torch.cat((emb.flatten(),
-                                           torch.as_tensor(visits).float())),
-                                 torch.as_tensor(self.moves).float()))
+        input_state = torch.cat((torch.cat((torch.cat((emb.flatten(),
+                                                       torch.as_tensor(visits).float())),
+                                            torch.as_tensor(self.moves).float())),
+                                 torch.tensor([int(curr_x), int(curr_z)]).float()))
 #        print(input_state)
 #        print(emb_np)
 #        print()
@@ -610,9 +612,10 @@ class deepQAgent(object):
 #                next_state = emb.flatten()
 #                print(next_state)
 #                next_state = torch.cat((emb.flatten(), torch.as_tensor(visits).float()))
-                next_state = torch.cat((torch.cat((emb.flatten(),
-                                                   torch.as_tensor(visits).float())),
-                                        torch.as_tensor(self.moves).float()))
+                next_state = torch.cat((torch.cat((torch.cat((emb.flatten(),
+                                                              torch.as_tensor(visits).float())),
+                                                   torch.as_tensor(self.moves).float())),
+                                        torch.tensor([int(curr_x), int(curr_z)]).float()))
 #                print(next_state)
 #                state_info = list()
 #                state_info.append(vision)
