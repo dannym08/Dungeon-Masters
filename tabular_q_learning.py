@@ -385,7 +385,7 @@ class deepQAgent(object):
 #                action = random.choice(np.arange(self.action_size))
             if( (action == 0 and vision[1] != 'gold_block') or (action == 1 and vision[7] != 'gold_block') or
                 (action == 2 and vision[3] != 'gold_block') or (action == 3 and vision[5] != 'gold_block') ):
-            break
+                break
         
 #        self.recent_actions.append(action)
 #        print(self.recent_actions)
