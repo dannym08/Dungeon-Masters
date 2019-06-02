@@ -69,10 +69,12 @@ class DQN(nn.Module):
     def __init__(self):
         super(DQN, self).__init__()
         
-        # D_in = input dimension = 9 * 5: a five number encoding for each of the block types plus a boolean for each block to denote if they have been visited
-        self.D_in = 9 * 5 + 9
+        # D_in = input dimension = 9 * 5: a five number encoding for each of the block types
+        # plus a boolean for each block to denote if they have been visited
+        # plus the previous six moves it has made so that it "perceive" movement
+        self.D_in = 9 * 5 + 9 + 6
         # H = hidden dimension, use a number between input and output dimension
-        self.H = 5
+        self.H = 50
         # D_out = output dimension = 4: 4 directions of move
         self.D_out = 4
         
@@ -155,6 +157,7 @@ class deepQAgent(object):
         self.gamma = gamma                      # discount factor
         self.update_every = 4                   # how often we updated the nn
         self.action_size = len(actions)
+        self.movement_memory = 6
         
         # running PyTorch on cpu
         self.device = torch.device('cpu')
@@ -331,7 +334,10 @@ class deepQAgent(object):
 #        print(emb)
 #        print(emb.flatten())
 #        print(torch.cat((emb.flatten(), torch.as_tensor(visits).float())))
-        input_state = torch.cat((emb.flatten(), torch.as_tensor(visits).float()))
+#        input_state = torch.cat((emb.flatten(), torch.as_tensor(visits).float()))
+        input_state = torch.cat((torch.cat((emb.flatten(),
+                                           torch.as_tensor(visits).float())),
+                                 torch.as_tensor(self.moves).float()))
 #        print(input_state)
 #        print(emb_np)
 #        print()
@@ -403,6 +409,7 @@ class deepQAgent(object):
                 (action == 2 and vision[3] != 'gold_block') or (action == 3 and vision[5] != 'gold_block') ):
                    break
         
+        self.moves.append(action)
 #        self.recent_actions.append(action)
 #        print(self.recent_actions)
 #        print(input_state)
@@ -451,6 +458,10 @@ class deepQAgent(object):
         
         self.visited = set() # always have starting position set to visited
         self.visited.add((4, 1))
+        self.moves = deque(maxlen=self.movement_memory)
+        for i in range(self.movement_memory):
+            self.moves.append(-1)
+        
 
         # wait for a valid observation
         world_state = agent_host.peekWorldState()
@@ -598,7 +609,10 @@ class deepQAgent(object):
                 print(emb)
 #                next_state = emb.flatten()
 #                print(next_state)
-                next_state = torch.cat((emb.flatten(), torch.as_tensor(visits).float()))
+#                next_state = torch.cat((emb.flatten(), torch.as_tensor(visits).float()))
+                next_state = torch.cat((torch.cat((emb.flatten(),
+                                                   torch.as_tensor(visits).float())),
+                                        torch.as_tensor(self.moves).float()))
                 print(next_state)
 #                state_info = list()
 #                state_info.append(vision)
