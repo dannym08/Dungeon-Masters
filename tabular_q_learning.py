@@ -69,8 +69,8 @@ class DQN(nn.Module):
     def __init__(self):
         super(DQN, self).__init__()
         
-        # D_in = input dimension = 9: nubmer of blocks in vision radius
-        self.D_in = 9
+        # D_in = input dimension = 10: 9 number encoding of blocks in vision, but a number to tell if it has been visited or not 
+        self.D_in = 10
         # H = hidden dimension, use a number between input and output dimension
         self.H = 7
         # D_out = output dimension = 4: 4 directions of move
@@ -151,7 +151,7 @@ class deepQAgent(object):
         self.learning_rate = learning_rate      # learning rate
         self.tau = tau                          # for soft update of target parameters
         self.epsilon= epsilon                   # inital epsilon-greedy
-        self.epsilon_decay = 0.99               # how quickly to decay epsilon
+        self.epsilon_decay = 0.999              # how quickly to decay epsilon
         self.gamma = gamma                      # discount factor
         self.update_every = 4                   # how often we updated the nn
         self.action_size = len(actions)
@@ -168,9 +168,6 @@ class deepQAgent(object):
         self.memory = ReplayBuffer(self.buffer_size, self.batch_size)
         # Initialize time step (for updating every UPDATE_EVERY steps)
         self.t_step = 0
-        
-        # remember which positons has been visited
-        self.visited = set((4,1))               # visited starting point
 
         self.logger = logging.getLogger(__name__)
         if debug:
@@ -281,7 +278,7 @@ class deepQAgent(object):
     def act(self, world_state, agent_host):
         """Returns actions for given state as per current policy."""
         
-        discovery_reward = 0
+        visits = list()
         obs_text = world_state.observations[-1].text
         obs = json.loads(obs_text)  # most recent observation
 #        print(obs)
@@ -299,11 +296,6 @@ class deepQAgent(object):
         
         xpos = obs[u'XPos']
         zpos = obs[u'ZPos']
-#        visit_code = 1
-        if (xpos, zpos) not in self.visited:
-#            visit_code = 0
-            discovery_reward += 10.0
-            self.visited.add((xpos,zpos))
         
         vision = obs['vision']
         encode = list()
@@ -311,7 +303,7 @@ class deepQAgent(object):
             if block not in self.block_list:
                 self.block_list.append(block)
             encode.append(self.block_list.index(block))
-        input_state = self.one_hot(torch.tensor(encode), len(encode)).float().unsqueeze(0)
+        input_state = self.one_hot(torch.tensor(encode), len(encode)).t().float()
 #        emb = self.one_hot(torch.tensor(encode), len(encode))
 #        emb_np = emb.detach().numpy()
 #        print()
@@ -331,6 +323,31 @@ class deepQAgent(object):
 #        print(state)
 #        print()
         
+#        print(self.visited)
+        for surrounding in [(-1,-1), (-1, 0), (-1, 1), (0, -1), (0, 0), (0, 1), (1, -1), (1, 0), (1,1)]:
+            if (int(xpos) + surrounding[0], int(zpos) + surrounding[1]) not in self.visited:
+                visits.append(0.)
+            else: 
+                visits.append(1.)
+                
+#        print(visits)
+        visit_tensor = torch.as_tensor(visits).unsqueeze(0)
+#        print(visit_tensor)
+#        print(input_state)
+#        print(torch.cat((input_state, visit_tensor)))
+#        print(torch.cat((input_state, visit_tensor)).t())
+#        print(torch.cat((input_state, visit_tensor)).t().unsqueeze(0))
+        input_state = torch.cat((input_state, visit_tensor)).t().unsqueeze(0)
+        
+#        state_actions = torch.as_tensor(self.recent_actions, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
+#        print(state_actions.size())
+#        print(input_state.size())
+#        print(torch.cat((input_state, state_actions), dim=1))
+#        print(torch.cat((input_state, state_actions), dim=1).t())
+#        input_state = torch.cat((input_state, state_actions), dim=1)
+#        print(input_state)
+        
+
         self.policy_model.eval()
         with torch.no_grad():
             action_values = self.policy_model(input_state)
@@ -360,7 +377,11 @@ class deepQAgent(object):
             if( (action == 0 and vision[1] != 'gold_block') or (action == 1 and vision[7] != 'gold_block') or
                 (action == 2 and vision[3] != 'gold_block') or (action == 3 and vision[5] != 'gold_block') ):
                    break
-            
+        
+#        self.recent_actions.append(action)
+#        print(self.recent_actions)
+#        print(input_state)
+#        print(prev)
 #        print(np.argmax(action_values.cpu().data.numpy()))
 #        print(action)
 #        print(np.average(action_values.cpu().data.numpy(),axis=1))
@@ -389,7 +410,7 @@ class deepQAgent(object):
 #        print()
 #        print()
             
-        return input_state, action, 0 # discovery_reward
+        return input_state, action
     
     def run(self, agenthost):
         """Run agent on current world"""
@@ -403,6 +424,9 @@ class deepQAgent(object):
         self.state = None
         self.action = None
         self.next_state = None
+        
+        self.visited = set() # always have starting position set to visited
+        self.visited.add((4, 1))
 
         # wait for a valid observation
         world_state = agent_host.peekWorldState()
@@ -451,9 +475,8 @@ class deepQAgent(object):
         # main loop:
         while world_state.is_mission_running:
             
-            state, action, discovery_reward = self.act(world_state, agent_host)
-            current_r += discovery_reward
-
+            state, action = self.act(world_state, agent_host)
+            
             # wait for the position to have changed and a reward received
             print('Waiting for data...', end=' ')
             while True:
@@ -532,20 +555,41 @@ class deepQAgent(object):
                     if block not in self.block_list:
                         self.block_list.append(block)
                     encode.append(self.block_list.index(block))
-                next_state = self.one_hot(torch.tensor(encode), len(encode)).float().unsqueeze(0)
+                next_state = self.one_hot(torch.tensor(encode), len(encode)).t().float()
                 
+                
+                visits = list()
+#                print(self.visited)
+                if (int(curr_x), int(curr_z)) not in self.visited:
+                    discovery_reward = 5
+                    self.visited.add((int(curr_x), int(curr_z)))
+                else:
+                    discovery_reward = 0
+#                print(self.visited)
+                for surrounding in [(-1,-1), (-1, 0), (-1, 1), (0, -1), (0, 0), (0, 1), (1, -1), (1, 0), (1,1)]:
+                    if (int(curr_x) + surrounding[0], int(curr_z) + surrounding[1]) not in self.visited:
+                        visits.append(0.)
+                    else: 
+                        visits.append(1.)
+                
+                visit_tensor = torch.as_tensor(visits).unsqueeze(0)
+                next_state = torch.cat((next_state, visit_tensor)).t().unsqueeze(0)
 #                print(state)
 #                print(action)
 #                print(current_r)
+                current_r += discovery_reward
+#                print(current_r)
 #                print(next_state)
 #                
-#                if count == 0:
+#                if count == 10:
 #                    print(prev)
                 
                 prev_x = curr_x
                 prev_z = curr_z
                 # place move into memory and update NN if necessary
                 agent.step(state, action, current_r, next_state)
+                print("reward for this step: ", current_r)
+
                 
                 total_reward += current_r
                 current_r = 0
@@ -681,7 +725,7 @@ def XML_generator(x,y):
                       </DiscreteMovementCommands>
                       <RewardForTouchingBlockType>
                         <Block reward="-10000.0" type="lava" behaviour="onceOnly"/>
-                        <Block reward="100.0" type="lapis_block" behaviour="onceOnly"/>
+                        <Block reward="1000.0" type="lapis_block" behaviour="onceOnly"/>
                         <Block reward="-100.0" type="red_sandstone" behaviour="onceOnly"/>
                         <Block reward="-500.0" type="gold_block"/>
                       </RewardForTouchingBlockType>
@@ -725,7 +769,7 @@ if not os.path.exists(mission_file):
 agent_host.addOptionalStringArgument('mission_file',
                                      'Path/to/file from which to load the mission.', mission_file)
 agent_host.addOptionalFloatArgument('alpha',
-                                    'Learning rate of the Q-learning agent.', 0.2)
+                                    'Learning rate of the Q-learning agent.', 0.1)
 agent_host.addOptionalFloatArgument('tau',
                                     'Soft update of target parameters.', 0.1)
 agent_host.addOptionalFloatArgument('epsilon',
