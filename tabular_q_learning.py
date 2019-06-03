@@ -323,7 +323,6 @@ class deepQAgent(object):
 
         try:
             vision = obs['vision']
-            break
         except KeyError:
             vision = [0,0,0,0,0,0,0,0,0] # 9 zeros
         encode = list()
