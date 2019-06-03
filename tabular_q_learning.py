@@ -320,12 +320,12 @@ class deepQAgent(object):
         curr_x = xpos
         curr_z = zpos
         
-        while True:
-            try:
-                vision = obs['vision']
-                break
-            except KeyError:
-                continue
+
+        try:
+            vision = obs['vision']
+            break
+        except KeyError:
+            vision = [0,0,0,0,0,0,0,0,0] # 9 zeros
         encode = list()
         for block in vision:
             encode.append(self.block_list.index(block))
