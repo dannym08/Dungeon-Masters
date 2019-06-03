@@ -151,7 +151,8 @@ class deepQAgent(object):
     """Deep Q-learning agent for discrete state/action spaces."""
     def __init__(self, actions=[], learning_rate=0.1, tau=0.1, epsilon=1.0, gamma=0.99, debug=False, canvas=None, root=None):
         
-        self.block_list = ['sandstone', 'gold_block', 'red_sandstone', 'lapis_block', 'cobblestone', 'grass']               # all types of blocks agent can see
+        self.block_list = ['sandstone', 'gold_block', 'red_sandstone', 'lapis_block',
+                           'cobblestone', 'grass', 'lava', 'flowing_lava']               # all types of blocks agent can see
         self.buffer_size = int(1e5)             # replay buffer size
         self.batch_size = 64                    # minibatch size
         self.learning_rate = learning_rate      # learning rate
