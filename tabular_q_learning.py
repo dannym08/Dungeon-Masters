@@ -688,6 +688,7 @@ class deepQAgent(object):
 
                 # place move into memory and update NN if necessary
                 total_reward += current_r
+
                 agent.step(state, action, current_r, next_state)
 
                 ### SPECIAL ###
@@ -711,6 +712,7 @@ class deepQAgent(object):
                     # input()
 
                 ### END ###
+
 
 #                print("current reward for this step: ", current_r)
 #                print("total reward for this step: ", total_reward)
