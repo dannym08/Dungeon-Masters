@@ -247,10 +247,12 @@ class deepQAgent(object):
 #        print(rewards.size())
 #        print(rewards)
 #        print(gamma * next_action)
-        targets = rewards + (gamma * torch.Tensor(next_action)).unsqueeze(1)
+        targets = rewards + (gamma * torch.Tensor(next_action))
 #        print(torch.Tensor(next_action))
 #        print(gamma * torch.Tensor(next_action))
-#        print((gamma * torch.Tensor(next_action)).unsqueeze(1).size())
+#        print((gamma * torch.Tensor(next_action)))
+#        print((gamma * torch.Tensor(next_action)).size())
+#        print(rewards.size())
 #        print("targets")
 #        print(targets)
 #        print(targets.size())
@@ -268,10 +270,14 @@ class deepQAgent(object):
 #        print(policy.size())
 #        print(policy)
 #        
-        
+#        print(policy)
+#        print(policy.size())
+#        print(targets)
+#        print(targets.size())
         # Compute loss
         loss = F.mse_loss(policy, targets)
 #        print(loss)
+#        print(prev)
         # Minimize the loss
         self.optimizer.zero_grad()
         loss.backward()
@@ -681,6 +687,7 @@ class deepQAgent(object):
 
 
                 # place move into memory and update NN if necessary
+                total_reward += current_r
                 agent.step(state, action, current_r, next_state)
 
                 ### SPECIAL ###
@@ -705,9 +712,10 @@ class deepQAgent(object):
 
                 ### END ###
 
-                print("reward for this step: ", current_r)
+#                print("current reward for this step: ", current_r)
+#                print("total reward for this step: ", total_reward)
+#                time.sleep(0.5)
 
-                total_reward += current_r
                 current_r = 0
                 
                 count += 1
