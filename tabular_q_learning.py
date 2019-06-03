@@ -74,7 +74,7 @@ class DQN(nn.Module):
         # plus a boolean for each block to denote if they have been visited
         # plus the previous six moves it has made so that it "perceive" movement
         # plus the 2 corrdinates of the agent's location
-        self.D_in = 9 * 6 + 9 + 6 + 2
+        self.D_in = 9 * 8 + 9 + 6 + 2
 
         # H = hidden dimension, use a number between input and output dimension
         self.H = 50
