@@ -689,7 +689,7 @@ class deepQAgent(object):
                 # place move into memory and update NN if necessary
                 total_reward += current_r
 
-                agent.step(state, action, current_r, next_state)
+                agent.step(state, action, total_reward, next_state)
 
                 ### SPECIAL ###
                 # Here, we can replace our current spot with a normal block
