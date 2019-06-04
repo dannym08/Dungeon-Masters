@@ -414,19 +414,28 @@ class deepQAgent(object):
 
         _i = 0
         print("Test Knowledge: "+str(test_knowledge))
+        print("Vision: "+"\n"+
+              str(vision[0:3])+"\n"+
+              str(vision[3:6])+"\n"+
+              str(vision[6:9])+"\n")
         while True:
             if ((random.random() > self.epsilon) or (test_knowledge and _i < 5)):
                 # t.max(1) will return largest column value of each row.
                 # second column on max result is index of where max element was
                 # found, so we pick action with the larger expected reward.
                 print("Optimal action: ", end="")
+                print(action_values)
                 action = action_values.max(0)[0].max(0)[0].view(1, 1)
+                print(action)
+                action_list = list(action_values)
+                action = torch.tensor([[action_list.index(action)]])
 #                action = np.average(action_values.cpu().data.numpy(),axis=1)
 #                action = np.argmax(action_values.cpu().data.numpy())
             else:
                 print("Random action: ", end="")
                 action = torch.tensor([[random.randrange(self.action_size)]])
 #                action = random.choice(np.arange(self.action_size))
+            print(action,self.actions[action])
             if( (action == 0 and vision[1] != 'gold_block') or (action == 1 and vision[7] != 'gold_block') or
                 (action == 2 and vision[3] != 'gold_block') or (action == 3 and vision[5] != 'gold_block') ):
                 break
@@ -439,7 +448,7 @@ class deepQAgent(object):
 #        print(self.recent_actions)
 #        print(input_state)
 #        print(np.argmax(action_values.cpu().data.numpy()))
-        print(action)
+#        print(action)
 #        print(np.average(action_values.cpu().data.numpy(),axis=1))
 #        print(np.argmax(np.average(action_values.cpu().data.numpy(),axis=1)))
 #        print(self.actions)
@@ -536,7 +545,7 @@ class deepQAgent(object):
         while world_state.is_mission_running:
             
             state, action = self.act(world_state, agent_host)
-            
+            #input("Press Enter to continue...")
             # wait for the position to have changed and a reward received
             print('Waiting for data...', end=' ')
             while True:
@@ -822,7 +831,7 @@ def XML_generator(x,y):
                   </About>
                   
                   <ModSettings>
-                    <MsPerTick>50</MsPerTick>
+                    <MsPerTick>80</MsPerTick>
                   </ModSettings>
                 
                   <ServerSection>
@@ -885,8 +894,8 @@ def XML_generator(x,y):
                           </Grid>
                       </ObservationFromGrid>
                       <VideoProducer want_depth="false">
-                          <Width>640</Width>
-                          <Height>480</Height>
+                          <Width>160</Width>
+                          <Height>120</Height>
                       </VideoProducer>
                       <DiscreteMovementCommands>
                           <ModifierList type="deny-list">
