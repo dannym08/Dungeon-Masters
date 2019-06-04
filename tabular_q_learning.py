@@ -871,7 +871,7 @@ def XML_generator(x,y):
                           '''+ add_items(arena_width, arena_height, agent_host.getIntArgument('i')) + '''
                 		  
                       </DrawingDecorator>
-                      <ServerQuitFromTimeUp timeLimitMs="30000"/>
+                      <ServerQuitFromTimeUp timeLimitMs="10000"/>
                       <ServerQuitWhenAnyAgentFinishes/>
                     </ServerHandlers>
                   </ServerSection>
