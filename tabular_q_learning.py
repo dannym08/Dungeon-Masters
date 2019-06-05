@@ -41,7 +41,7 @@ import time
 import malmoutils
 
 
-from collections import namedtuple, deque
+from collections import namedtuple, deque, defaultdict
 import numpy as np
 import torch
 import torch.nn as nn
@@ -339,10 +339,11 @@ class deepQAgent(object):
         try:
             vision = obs['vision']
         except KeyError:
-            vision = [0,0,0,0,0,0,0,0,0] # 9 zeros
-        encode = list()
-        for block in vision:
-            encode.append(self.block_list.index(block))
+            vision = ["sandstone","sandstone","sandstone","sandstone","sandstone","sandstone","sandstone","sandstone","sandstone",] # 9 zeros
+        #encode = list()
+        #for block in vision:
+            #encode.append(self.block_list.index(block))
+        encode = encode_observations(vision)
 
 #        input_state = self.one_hot(torch.tensor(encode), len(encode)).flatten()       .float()
 #        print(input_state)
@@ -865,18 +866,17 @@ def add_items(arena_width, arena_height, items_count=1):
     return xml
 
 def encode_observations(vision:list=list()):
-    """CURRENTLY NOT USED!!! block_list used instead for encoding."""
-    encode_dict = {
-        "sandstone": 0,
-        "flowing_lava": 1,
-        "lapis_block": 2,
-        "red_sandstone": 3,
-        "stone": 4,
-        "gold_block": 5,
-        "grass": 6,
-        "cobblestone": 7,
-        "lava": 1,
-    }
+    encode_dict = defaultdict(lambda: 0,
+        sandstone = 0,
+        flowing_lava = 1,
+        lapis_block = 2,
+        red_sandstone = 3,
+        stone = 4,
+        gold_block = 5,
+        grass = 6,
+        cobblestone = 7,
+        lava = 1,
+                              )
 
     result = []
     for item in vision:
@@ -921,10 +921,10 @@ def XML_generator(x,y):
                           <DrawBlock  x="4"   y="45"  z="1"  type="cobblestone" />                           <!-- the starting marker -->
                     		  
                           <!-- Boundary -->
-                          <DrawCuboid x1="'''+str(arena_width+1)+'''"  y1="45" z1="-1"  x2="'''+str(arena_width+1)+'''" y2="45" z2="'''+str(arena_height)+'''" type="gold_block" />           <!-- Left wall from start position -->
-                          <DrawCuboid x1="-1"  y1="45" z1="-1"  x2="'''+str(arena_width+1)+'''" y2="45" z2="-1" type="gold_block" />			  <!-- Bottom wall from start position -->
-                          <DrawCuboid x1="-1"  y1="45" z1="-1"  x2="-1" y2="45" z2="'''+str(arena_height)+'''" type="gold_block" />           <!-- Right wall from start position -->
-                          <DrawCuboid x1="-1"  y1="45" z1="'''+str(arena_height)+'''"  x2="'''+str(arena_width+1)+'''" y2="45" z2="'''+str(arena_height)+'''" type="gold_block" />           <!-- Top wall from start position -->
+                          <DrawCuboid x1="'''+str(arena_width+1)+'''"  y1="45" z1="-1"  x2="'''+str(arena_width+1)+'''" y2="45" z2="'''+str(arena_height)+'''" type="lava" />           <!-- Left wall from start position -->
+                          <DrawCuboid x1="-1"  y1="45" z1="-1"  x2="'''+str(arena_width+1)+'''" y2="45" z2="-1" type="lava" />			  <!-- Bottom wall from start position -->
+                          <DrawCuboid x1="-1"  y1="45" z1="-1"  x2="-1" y2="45" z2="'''+str(arena_height)+'''" type="lava" />           <!-- Right wall from start position -->
+                          <DrawCuboid x1="-1"  y1="45" z1="'''+str(arena_height)+'''"  x2="'''+str(arena_width+1)+'''" y2="45" z2="'''+str(arena_height)+'''" type="lava" />           <!-- Top wall from start position -->
                 
                           <DrawBlock  x="''' + str(arena_width) + '''"   y="45"  z="''' + str(arena_height-1) + '''" type="lapis_block" />                           <!-- the destination marker -->
                           <DrawItem   x="''' + str(arena_width) + '''"   y="46"  z="''' + str(arena_height-1) + '''" type="diamond" />                               <!-- another destination marker -->
