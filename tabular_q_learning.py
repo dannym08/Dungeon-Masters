@@ -74,8 +74,8 @@ class DQN(nn.Module):
         # plus a boolean for each block to denote if they have been visited
         # plus the previous six moves it has made so that it "perceive" movement
         # plus the 2 corrdinates of the agent's location
-        self.D_in = 9 * 8 + 9 + 1 + 2
-
+        # same reasoning as above but without the visited information
+        self.D_in = 9 * 8 + 6 + 2
         # H = hidden dimension, use a number between input and output dimension
         self.H = 50
         # D_out = output dimension = 4: 4 directions of move
@@ -154,7 +154,7 @@ class deepQAgent(object):
         self.block_list = ['sandstone', 'gold_block', 'red_sandstone', 'lapis_block',
                            'cobblestone', 'grass', 'lava', 'flowing_lava']               # all types of blocks agent can see
         self.buffer_size = int(1e5)             # replay buffer size
-        self.batch_size = 8  #64                  # minibatch size
+        self.batch_size = 64                     # minibatch size
         self.learning_rate = learning_rate      # learning rate
         self.tau = tau                          # for soft update of target parameters
         self.epsilon= epsilon                   # inital epsilon-greedy
@@ -162,7 +162,7 @@ class deepQAgent(object):
         self.gamma = gamma                      # discount factor
         self.update_every = 5                   # how often we updated the nn
         self.action_size = len(actions)
-        self.movement_memory = 1
+        self.movement_memory = 6
 
         # running PyTorch on cpu
         self.device = torch.device('cpu')
@@ -320,7 +320,8 @@ class deepQAgent(object):
             obs = json.loads(obs_text)  # most recent observation
         else:
             obs = old_obs
-        print(obs)
+        #print(obs)
+
         self.logger.debug(obs)
         if not u'XPos' in obs or not u'ZPos' in obs:
             self.logger.error("Incomplete observation received: %s" % obs_text)
@@ -350,13 +351,14 @@ class deepQAgent(object):
 
 #        input_state = self.one_hot(torch.tensor(encode), len(encode)).flatten()       .float()
 #        print(input_state)
-        visits = list()
-#        print(self.visited)
-        for surrounding in [(-1,-1), (-1, 0), (-1, 1), (0, -1), (0, 0), (0, 1), (1, -1), (1, 0), (1,1)]:
-            if (int(curr_x) + surrounding[0], int(curr_z) + surrounding[1]) not in self.visited:
-                visits.append(0)
-            else:
-                visits.append(1)
+
+#        visits = list()
+##        print(self.visited)
+#        for surrounding in [(-1,-1), (-1, 0), (-1, 1), (0, -1), (0, 0), (0, 1), (1, -1), (1, 0), (1,1)]:
+#            if (int(curr_x) + surrounding[0], int(curr_z) + surrounding[1]) not in self.visited:
+#                visits.append(0)
+#            else: 
+#                visits.append(1)
 
         emb = self.one_hot(torch.tensor(encode), len(self.block_list))
 
@@ -371,9 +373,11 @@ class deepQAgent(object):
 #        print(emb.flatten())
 #        print(torch.cat((emb.flatten(), torch.as_tensor(visits).float())))
 #        input_state = torch.cat((emb.flatten(), torch.as_tensor(visits).float()))
-        input_state = torch.cat((torch.cat((torch.cat((emb.flatten(),
-                                                       torch.as_tensor(visits).float())),
-                                            torch.as_tensor(self.moves).float())),
+#        input_state = torch.cat((torch.cat((torch.cat((emb.flatten(),
+#                                                       torch.as_tensor(visits).float())),
+#                                            torch.as_tensor(self.moves).float())),
+#                                 torch.tensor([int(curr_x), int(curr_z)]).float()))
+        input_state = torch.cat((torch.cat((emb.flatten(), torch.as_tensor(self.moves).float())),
                                  torch.tensor([int(curr_x), int(curr_z)]).float()))
 
 
@@ -471,7 +475,10 @@ class deepQAgent(object):
             _i += 1
             break
 
-        self.moves.append(action)
+#        self.moves.append(action)
+        self.moves.append(int(curr_x))
+        self.moves.append(int(curr_z))
+
 #        self.recent_actions.append(action)
 #        print(self.recent_actions)
 #        print(input_state)
@@ -520,13 +527,14 @@ class deepQAgent(object):
         self.state = None
         self.action = None
         self.next_state = None
-
-        self.visited = set() # always have starting position set to visited
-        self.visited.add((4, 1))
+        
+#        self.visited = set() # always have starting position set to visited
+#        self.visited.add((4, 1))
         self.moves = deque(maxlen=self.movement_memory)
         for i in range(self.movement_memory):
-            self.moves.append(-1)
-
+#            self.moves.append(-1)
+            self.moves.append(4)
+            self.moves.append(1)
 
         # wait for a valid observation
         world_state = agent_host.peekWorldState()
@@ -655,30 +663,33 @@ class deepQAgent(object):
                     encode.append(self.block_list.index(block))
 #                input_state = self.one_hot(torch.tensor(encode), len(encode)).flatten()       .float()
 #                print(input_state)
-                visits = list()
-#                print(self.visited)
-#                print(self.visited)
-                if (int(curr_x), int(curr_z)) not in self.visited:
-                    discovery_reward = 5
-                    self.visited.add((int(curr_x), int(curr_z)))
-                else:
-                    discovery_reward = 0
-#                print(self.visited)
-                for surrounding in [(-1,-1), (-1, 0), (-1, 1), (0, -1), (0, 0), (0, 1), (1, -1), (1, 0), (1,1)]:
-                    if (int(curr_x) + surrounding[0], int(curr_z) + surrounding[1]) not in self.visited:
-                        visits.append(0)
-                    else:
-                        visits.append(1)
+
+#                visits = list()
+##                print(self.visited)
+##                print(self.visited)
+#                if (int(curr_x), int(curr_z)) not in self.visited:
+#                    discovery_reward = 0
+#                    self.visited.add((int(curr_x), int(curr_z)))
+#                else:
+#                    discovery_reward = 0
+##                print(self.visited)
+#                for surrounding in [(-1,-1), (-1, 0), (-1, 1), (0, -1), (0, 0), (0, 1), (1, -1), (1, 0), (1,1)]:
+#                    if (int(curr_x) + surrounding[0], int(curr_z) + surrounding[1]) not in self.visited:
+#                        visits.append(0)
+#                    else: 
+#                        visits.append(1)
 
                 emb = self.one_hot(torch.tensor(encode), len(self.block_list))
 #                print(emb)
 #                next_state = emb.flatten()
 #                print(next_state)
 #                next_state = torch.cat((emb.flatten(), torch.as_tensor(visits).float()))
-                next_state = torch.cat((torch.cat((torch.cat((emb.flatten(),
-                                                              torch.as_tensor(visits).float())),
-                                                   torch.as_tensor(self.moves).float())),
-                                        torch.tensor([int(curr_x), int(curr_z)]).float()))
+#                next_state = torch.cat((torch.cat((torch.cat((emb.flatten(),
+#                                                              torch.as_tensor(visits).float())),
+#                                                   torch.as_tensor(self.moves).float())),
+#                                        torch.tensor([int(curr_x), int(curr_z)]).float()))
+                next_state = torch.cat((torch.cat((emb.flatten(), torch.as_tensor(self.moves).float())),
+                                         torch.tensor([int(curr_x), int(curr_z)]).float()))
 #                print(next_state)
 #                state_info = list()
 #                state_info.append(vision)
@@ -714,7 +725,7 @@ class deepQAgent(object):
 #                print(state)
 #                print(action)
 #                print(current_r)
-                current_r += discovery_reward
+#                current_r += discovery_reward
 #                print(current_r)
 #                print(next_state)
 #
@@ -939,7 +950,7 @@ def XML_generator(x,y):
                         
                           <!-- coordinates for cuboid are inclusive -->
                           <DrawCuboid x1="-2" y1="46" z1="-2" x2="'''+str(arena_width+2)+'''" y2="50" z2="'''+str(arena_height+2)+'''" type="air" />            <!-- limits of our arena -->
-                          <DrawCuboid x1="-2" y1="45" z1="-2" x2="'''+str(arena_width+2)+'''" y2="45" z2="'''+str(arena_height+2)+'''" type="red_sandstone" />           <!-- lava floor -->
+                          <DrawCuboid x1="-2" y1="45" z1="-2" x2="'''+str(arena_width+2)+'''" y2="45" z2="'''+str(arena_height+2)+'''" type="lava" />           <!-- lava floor -->
                           <DrawCuboid x1="-1"  y1="44" z1="0"  x2="'''+str(arena_width)+'''" y2="45" z2="'''+str(arena_height)+'''" type="sandstone" />      <!-- floor of the arena -->
                 		  
                           <DrawBlock  x="4"   y="45"  z="1"  type="cobblestone" />                           <!-- the starting marker -->
@@ -1048,8 +1059,8 @@ agent_host.addOptionalFloatArgument('gamma', 'Discount factor.', 0.99)
 agent_host.addOptionalFlag('load_model', 'Load initial model from model_file.')
 agent_host.addOptionalStringArgument('model_file', 'Path to the initial model file', '')
 agent_host.addOptionalFlag('debug', 'Turn on debugging.')
-agent_host.addOptionalIntArgument('x','The width of the arena.',18)
-agent_host.addOptionalIntArgument('y','The width of the arena.',16)
+agent_host.addOptionalIntArgument('x','The width of the arena.',10)
+agent_host.addOptionalIntArgument('y','The width of the arena.',10)
 agent_host.addOptionalIntArgument('i','The total number of small items in the arena (except the goal)', 5)
 agent_host.addOptionalStringArgument('policy_file', 'Load policy model from path','')
 agent_host.addOptionalStringArgument('target_file', 'Load target model from path','')
