@@ -74,7 +74,7 @@ class DQN(nn.Module):
         # plus a boolean for each block to denote if they have been visited
         # plus the previous six moves it has made so that it "perceive" movement
         # plus the 2 corrdinates of the agent's location
-        self.D_in = 9 * 8 + 9 + 3 + 2
+        self.D_in = 9 * 8 + 9 + 1 + 2
 
         # H = hidden dimension, use a number between input and output dimension
         self.H = 50
@@ -154,15 +154,15 @@ class deepQAgent(object):
         self.block_list = ['sandstone', 'gold_block', 'red_sandstone', 'lapis_block',
                            'cobblestone', 'grass', 'lava', 'flowing_lava']               # all types of blocks agent can see
         self.buffer_size = int(1e5)             # replay buffer size
-        self.batch_size = 64                    # minibatch size
+        self.batch_size = 8  #64                  # minibatch size
         self.learning_rate = learning_rate      # learning rate
         self.tau = tau                          # for soft update of target parameters
         self.epsilon= epsilon                   # inital epsilon-greedy
         self.epsilon_decay = 0.00009              # how quickly to decay epsilon
         self.gamma = gamma                      # discount factor
-        self.update_every = 8                   # how often we updated the nn
+        self.update_every = 5                   # how often we updated the nn
         self.action_size = len(actions)
-        self.movement_memory = 3
+        self.movement_memory = 1
 
         # running PyTorch on cpu
         self.device = torch.device('cpu')
@@ -312,12 +312,15 @@ class deepQAgent(object):
         for target_param, policy_param in zip(target_model.parameters(), policy_model.parameters()):
             target_param.data.copy_(tau*policy_param.data + (1.0-tau)*target_param.data)
 
-    def act(self, world_state, agent_host):
+    def act(self, world_state, agent_host, old_obs=None):
         """Returns actions for given state as per current policy."""
         visits = list()
-        obs_text = world_state.observations[-1].text
-        obs = json.loads(obs_text)  # most recent observation
-        #print(obs)
+        if old_obs is None:
+            obs_text = world_state.observations[-1].text
+            obs = json.loads(obs_text)  # most recent observation
+        else:
+            obs = old_obs
+        print(obs)
         self.logger.debug(obs)
         if not u'XPos' in obs or not u'ZPos' in obs:
             self.logger.error("Incomplete observation received: %s" % obs_text)
@@ -484,8 +487,11 @@ class deepQAgent(object):
         self.prev_s = current_s
         self.prev_a = action
 
-        obs_text = world_state.observations[-1].text
-        obs = json.loads(obs_text)  # most recent observation
+        if old_obs is None:
+            obs_text = world_state.observations[-1].text
+            obs = json.loads(obs_text)  # most recent observation
+        else:
+            obs = old_obs
 #        print()
 #        print("after command")
 #        print(obs)
@@ -761,14 +767,32 @@ class deepQAgent(object):
         self.logger.debug("Final reward: %d" % current_r)
         total_reward += current_r
 
-        #obs = json.loads(agent_host.getWorldState().observations[-1].text)
+        #state = np.array([int(obs[u'XPos']),
+        #                  int(obs[u'ZPos'])])
 
-        state = np.array([int(obs[u'XPos']),
-                          int(obs[u'ZPos'])])
         # update Q values
-        state = torch.from_numpy(state).float().unsqueeze(0)#.to(self.device)
-        self.policy_model.eval()
-        self.policy_model.train()
+        #state = torch.from_numpy(state).float().unsqueeze(0)#.to(self.device)
+        #self.policy_model.eval()
+        #self.policy_model.train()
+
+        world_state = agent_host.getWorldState()
+
+        x = obs[u'XPos']
+        z = obs[u'ZPos']
+
+        action = int(action)
+        if action == 0:
+            z -= 1
+        elif action == 1:
+            z += 1
+        elif action == 2:
+            x -= 1
+        elif action == 3:
+            x += 1
+
+        obs[u'XPos'] = x
+        obs[u'ZPos'] = z
+        state, action = self.act(world_state, agent_host, old_obs=obs)
 
         # update epsilon for next run but don't let epsilon get below 0.01
         if self.epsilon > 0.01 or True: #override for test
@@ -915,16 +939,16 @@ def XML_generator(x,y):
                         
                           <!-- coordinates for cuboid are inclusive -->
                           <DrawCuboid x1="-2" y1="46" z1="-2" x2="'''+str(arena_width+2)+'''" y2="50" z2="'''+str(arena_height+2)+'''" type="air" />            <!-- limits of our arena -->
-                          <DrawCuboid x1="-2" y1="45" z1="-2" x2="'''+str(arena_width+2)+'''" y2="45" z2="'''+str(arena_height+2)+'''" type="lava" />           <!-- lava floor -->
+                          <DrawCuboid x1="-2" y1="45" z1="-2" x2="'''+str(arena_width+2)+'''" y2="45" z2="'''+str(arena_height+2)+'''" type="red_sandstone" />           <!-- lava floor -->
                           <DrawCuboid x1="-1"  y1="44" z1="0"  x2="'''+str(arena_width)+'''" y2="45" z2="'''+str(arena_height)+'''" type="sandstone" />      <!-- floor of the arena -->
                 		  
                           <DrawBlock  x="4"   y="45"  z="1"  type="cobblestone" />                           <!-- the starting marker -->
                     		  
                           <!-- Boundary -->
-                          <DrawCuboid x1="'''+str(arena_width+1)+'''"  y1="45" z1="-1"  x2="'''+str(arena_width+1)+'''" y2="45" z2="'''+str(arena_height)+'''" type="lava" />           <!-- Left wall from start position -->
-                          <DrawCuboid x1="-1"  y1="45" z1="-1"  x2="'''+str(arena_width+1)+'''" y2="45" z2="-1" type="lava" />			  <!-- Bottom wall from start position -->
-                          <DrawCuboid x1="-1"  y1="45" z1="-1"  x2="-1" y2="45" z2="'''+str(arena_height)+'''" type="lava" />           <!-- Right wall from start position -->
-                          <DrawCuboid x1="-1"  y1="45" z1="'''+str(arena_height)+'''"  x2="'''+str(arena_width+1)+'''" y2="45" z2="'''+str(arena_height)+'''" type="lava" />           <!-- Top wall from start position -->
+                          <DrawCuboid x1="'''+str(arena_width+1)+'''"  y1="45" z1="-1"  x2="'''+str(arena_width+1)+'''" y2="45" z2="'''+str(arena_height)+'''" type="red_sandstone" />           <!-- Left wall from start position -->
+                          <DrawCuboid x1="-1"  y1="45" z1="-1"  x2="'''+str(arena_width+1)+'''" y2="45" z2="-1" type="red_sandstone" />			  <!-- Bottom wall from start position -->
+                          <DrawCuboid x1="-1"  y1="45" z1="-1"  x2="-1" y2="45" z2="'''+str(arena_height)+'''" type="red_sandstone" />           <!-- Right wall from start position -->
+                          <DrawCuboid x1="-1"  y1="45" z1="'''+str(arena_height)+'''"  x2="'''+str(arena_width+1)+'''" y2="45" z2="'''+str(arena_height)+'''" type="red_sandstone" />           <!-- Top wall from start position -->
                 
                           <DrawBlock  x="''' + str(arena_width) + '''"   y="45"  z="''' + str(arena_height-1) + '''" type="lapis_block" />                           <!-- the destination marker -->
                           <DrawItem   x="''' + str(arena_width) + '''"   y="46"  z="''' + str(arena_height-1) + '''" type="diamond" />                               <!-- another destination marker -->
