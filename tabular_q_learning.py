@@ -74,18 +74,18 @@ class DQN(nn.Module):
         # plus a boolean for each block to denote if they have been visited
         # plus the previous six moves it has made so that it "perceive" movement
         # plus the 2 corrdinates of the agent's location
-        self.D_in = 9 * 8 + 9 + 4 + 2
+        self.D_in = 9 * 8 + 9 + 3 + 2
 
         # H = hidden dimension, use a number between input and output dimension
         self.H = 50
         # D_out = output dimension = 4: 4 directions of move
 
         self.D_out = 4
-        
+
         self.input_layer = nn.Linear(self.D_in, self.H)
         self.hidden_layer = nn.Linear(self.H, self.H)
         self.output_layer = nn.Linear(self.H, self.D_out)
-        
+
     def forward(self, x):
 #        print(x)
         h_relu = F.relu(self.input_layer(x))
@@ -98,7 +98,7 @@ class DQN(nn.Module):
 
 class ReplayBuffer:
     """Fixed-size buffer to store experience tuples."""
-    
+
     def __init__(self, buffer_size, batch_size):
         """Initialize a ReplayBuffer object.
         Params
@@ -107,15 +107,15 @@ class ReplayBuffer:
             batch_size (int): size of each training batch
             seed (int): random seed
         """
-        self.memory = deque(maxlen=buffer_size)  
+        self.memory = deque(maxlen=buffer_size)
         self.batch_size = batch_size
         self.experience = namedtuple("Experience", field_names=["state", "action", "reward", "next_state"])
-    
+
     def add(self, state, action, reward, next_state):
         """Add a new experience to memory."""
         exp = self.experience(state.detach().numpy(), action, reward, next_state.detach().numpy())
         self.memory.append(exp)
-    
+
     def sample(self):
         """Randomly sample a batch of experiences from memory."""
         experiences = random.sample(self.memory, k=self.batch_size)
@@ -126,31 +126,31 @@ class ReplayBuffer:
 #        print(experiences)
 #        print()
 #        print("sampling")
-        
+
 #        print(np.vstack([exp.state for exp in experiences if exp is not None]))
         states = torch.from_numpy(np.vstack([exp.state for exp in experiences if exp is not None])).float()#.to(deepQAgent.device)
-        
+
 #        print(np.vstack([exp.action for exp in experiences if exp is not None]))
         actions = torch.from_numpy(np.vstack([exp.action for exp in experiences if exp is not None])).long()#.to(deepQAgent.device)
-        
+
 #        print(np.vstack([exp.reward for exp in experiences if exp is not None]))
         rewards = torch.from_numpy(np.vstack([exp.reward for exp in experiences if exp is not None])).float()#.to(deepQAgent.device)
-        
+
 #        print(np.vstack([exp.next_state for exp in experiences if exp is not None]))
         next_states = torch.from_numpy(np.vstack([exp.next_state for exp in experiences if exp is not None])).float()#.to(deepQAgent.device)
 
-        
+
         return (states, actions, rewards, next_states)
 
     def __len__(self):
         """Return the current size of internal memory."""
         return len(self.memory)
-    
+
 
 class deepQAgent(object):
     """Deep Q-learning agent for discrete state/action spaces."""
     def __init__(self, actions=[], learning_rate=0.1, tau=0.1, epsilon=1.0, gamma=0.99, debug=False, canvas=None, root=None, target_file=None, policy_file=None):
-        
+
         self.block_list = ['sandstone', 'gold_block', 'red_sandstone', 'lapis_block',
                            'cobblestone', 'grass', 'lava', 'flowing_lava']               # all types of blocks agent can see
         self.buffer_size = int(1e5)             # replay buffer size
@@ -160,13 +160,13 @@ class deepQAgent(object):
         self.epsilon= epsilon                   # inital epsilon-greedy
         self.epsilon_decay = 0.00009              # how quickly to decay epsilon
         self.gamma = gamma                      # discount factor
-        self.update_every = 32                   # how often we updated the nn
+        self.update_every = 8                   # how often we updated the nn
         self.action_size = len(actions)
-        self.movement_memory = 4
-        
+        self.movement_memory = 3
+
         # running PyTorch on cpu
         self.device = torch.device('cpu')
-        
+
         # create network
         self.policy_model = DQN()#.to(self.device)
         self.target_model = DQN()#.to(self.device)
@@ -184,7 +184,7 @@ class deepQAgent(object):
             self.policy_model.eval()
             print("loaded policy model from file!")
             input("Press Enter to acknowledge...")
-        
+
         # create memory
         self.memory = ReplayBuffer(self.buffer_size, self.batch_size)
         # Initialize time step (for updating every UPDATE_EVERY steps)
@@ -199,14 +199,14 @@ class deepQAgent(object):
         self.logger.addHandler(logging.StreamHandler(sys.stdout))
 
         self.actions = actions
-        
+
         self.canvas = canvas
         self.root = root
 
         self.rep = 0
 
         self.action_values_old = list()
-    
+
     def step(self, state, action, reward, next_state):
 #        print()
 #        print(state)
@@ -214,7 +214,7 @@ class deepQAgent(object):
 #        print()
         # Save experience in replay memory
         self.memory.add(state, action, reward, next_state)
-        
+
         # Learn every UPDATE_EVERY time steps.
         self.t_step = (self.t_step + 1) % self.update_every
         if self.t_step == 0:
@@ -222,7 +222,7 @@ class deepQAgent(object):
             if len(self.memory) > self.batch_size:
                 experiences = self.memory.sample()
                 self.learn(experiences, self.gamma)
-    
+
     def learn(self, experiences, gamma):
         """Update value parameters using given batch of experience tuples.
         Params
@@ -271,7 +271,7 @@ class deepQAgent(object):
 #        print("targets")
 #        print(targets)
 #        print(targets.size())
-#        
+#
         # Get expected Q values from policy model
 #        print("actions")
 #        print(actions)
@@ -284,7 +284,7 @@ class deepQAgent(object):
 #        expected_q = self.policy_model(states).gather(1, actions)
 #        print(policy.size())
 #        print(policy)
-#        
+#
 #        print(policy)
 #        print(policy.size())
 #        print(targets)
@@ -299,8 +299,8 @@ class deepQAgent(object):
         self.optimizer.step()
 
         # ------------------- update target network ------------------- #
-        self.soft_update(self.policy_model, self.target_model, self.tau)   
-    
+        self.soft_update(self.policy_model, self.target_model, self.tau)
+
     def soft_update(self, policy_model, target_model, tau):
         """Soft update model parameters.
         θ_target = τ*θ_policy + (1 - τ)*θ_target
@@ -311,7 +311,7 @@ class deepQAgent(object):
 #        print()
         for target_param, policy_param in zip(target_model.parameters(), policy_model.parameters()):
             target_param.data.copy_(tau*policy_param.data + (1.0-tau)*target_param.data)
-            
+
     def act(self, world_state, agent_host):
         """Returns actions for given state as per current policy."""
         visits = list()
@@ -324,17 +324,17 @@ class deepQAgent(object):
             return 0
         current_s = "%d,%d" % (int(obs[u'XPos']), int(obs[u'ZPos']))
         self.logger.debug("State: %s (x = %.2f, z = %.2f)" % (current_s, float(obs[u'XPos']), float(obs[u'ZPos'])))
-        
+
 #        print()
 #        print("before command")
-        print(obs)
-        
+#        print(obs)
+
         xpos = obs[u'XPos']
         zpos = obs[u'ZPos']
-        
+
         curr_x = xpos
         curr_z = zpos
-        
+
 
         try:
             vision = obs['vision']
@@ -352,9 +352,9 @@ class deepQAgent(object):
         for surrounding in [(-1,-1), (-1, 0), (-1, 1), (0, -1), (0, 0), (0, 1), (1, -1), (1, 0), (1,1)]:
             if (int(curr_x) + surrounding[0], int(curr_z) + surrounding[1]) not in self.visited:
                 visits.append(0)
-            else: 
+            else:
                 visits.append(1)
-        
+
         emb = self.one_hot(torch.tensor(encode), len(self.block_list))
 
         #self.emb_temp = deepcopy(emb)
@@ -377,26 +377,26 @@ class deepQAgent(object):
 #        print(input_state)
 #        print(emb_np)
 #        print()
-#        
-#            
+#
+#
 #        state = np.array([int(xpos),
 #                          int(zpos),
 #                          int(visit_code)])
-#        
+#
 #        state.append(emb_np)
-    
+
         # update Q values        
 #        state = torch.from_numpy(state).float().unsqueeze(0)#.to(self.device)
 #        print(state)
 #        print()
-        
+
 #        print(self.visited)
 #        for surrounding in [(-1,-1), (-1, 0), (-1, 1), (0, -1), (0, 0), (0, 1), (1, -1), (1, 0), (1,1)]:
 #            if (int(xpos) + surrounding[0], int(zpos) + surrounding[1]) not in self.visited:
 #                visits.append(0.)
-#            else: 
+#            else:
 #                visits.append(1.)
-                
+
 #        print(visits)
 #        visit_tensor = torch.as_tensor(visits).unsqueeze(0)
 #        print(visit_tensor)
@@ -405,7 +405,7 @@ class deepQAgent(object):
 #        print(torch.cat((input_state, visit_tensor)).t())
 #        print(torch.cat((input_state, visit_tensor)).t().unsqueeze(0))
 #        input_state = torch.cat((input_state, visit_tensor)).t().unsqueeze(0)
-        
+
 #        state_actions = torch.as_tensor(self.recent_actions, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
 #        print(state_actions.size())
 #        print(input_state.size())
@@ -413,7 +413,7 @@ class deepQAgent(object):
 #        print(torch.cat((input_state, state_actions), dim=1).t())
 #        input_state = torch.cat((input_state, state_actions), dim=1)
 #        print(input_state)
-        
+
 
         self.policy_model.eval()
         with torch.no_grad():
@@ -423,7 +423,7 @@ class deepQAgent(object):
 
 
         self.drawQ( curr_x = int(obs[u'XPos']), curr_y = int(obs[u'ZPos']) , action_values = action_values)
-        
+
 #        print(state)
 #        print(action_values)
 
@@ -442,15 +442,15 @@ class deepQAgent(object):
               str(vision[0:3])+"\n"+
               str(vision[3:6])+"\n"+
               str(vision[6:9])+"\n")
+        print("Action values: "+str(action_values))
         while True:
             if ((random.random() > self.epsilon) or (test_knowledge and _i < 5)):
                 # t.max(1) will return largest column value of each row.
                 # second column on max result is index of where max element was
                 # found, so we pick action with the larger expected reward.
                 print("Optimal action: ", end="")
-                print(action_values)
                 action = action_values.max(0)[0].max(0)[0].view(1, 1)
-                print(action)
+                print(str(action)+", ", end="")
                 action_list = list(action_values)
                 action = torch.tensor([[action_list.index(action)]])
 #                action = np.average(action_values.cpu().data.numpy(),axis=1)
@@ -467,7 +467,7 @@ class deepQAgent(object):
             #    print("abort (wall)")
             _i += 1
             break
-        
+
         self.moves.append(action)
 #        self.recent_actions.append(action)
 #        print(self.recent_actions)
@@ -495,13 +495,13 @@ class deepQAgent(object):
             return 0
         current_s = "%d,%d" % (int(obs[u'XPos']), int(obs[u'ZPos']))
         self.logger.debug("State: %s (x = %.2f, z = %.2f)" % (current_s, float(obs[u'XPos']), float(obs[u'ZPos'])))
-            
+
 #        print(next_state)
 #        print()
 #        print()
-            
+
         return input_state, action
-    
+
     def run(self, agent_host, test_knowledge):
         """Run agent on current world"""
 
@@ -514,13 +514,13 @@ class deepQAgent(object):
         self.state = None
         self.action = None
         self.next_state = None
-        
+
         self.visited = set() # always have starting position set to visited
         self.visited.add((4, 1))
         self.moves = deque(maxlen=self.movement_memory)
         for i in range(self.movement_memory):
             self.moves.append(-1)
-        
+
 
         # wait for a valid observation
         world_state = agent_host.peekWorldState()
@@ -537,7 +537,7 @@ class deepQAgent(object):
         if not world_state.is_mission_running:
             return 0  # mission already ended
 
-        assert len(world_state.video_frames) > 0, 'No video frames!?' 
+        assert len(world_state.video_frames) > 0, 'No video frames!?'
 
         obs = json.loads(world_state.observations[-1].text)
         prev_x = obs[u'XPos']
@@ -555,20 +555,20 @@ class deepQAgent(object):
         # take first action
 #        print(pre_state)
 #        print(state)
-        
+
 #        obs = json.loads(world_state.observations[-1].text)
 #        print("after first action")
 #        print("curr_location: ", obs[u'XPos'], obs[u'ZPos'])
-        
+
 
         require_move = True
         check_expected_position = True
-        
+
         count = 0
 
         # main loop:
         while world_state.is_mission_running:
-            
+
             state, action = self.act(world_state, agent_host)
             #input("Press Enter to continue...")
             # wait for the position to have changed and a reward received
@@ -621,7 +621,7 @@ class deepQAgent(object):
                 curr_z = obs[u'ZPos']
                 print('New position from observation:', curr_x, ',', curr_z, 'after action:', self.actions[self.prev_a],
                       end=' ')  # NSWE
-                
+
                 if check_expected_position:
                     expected_x = prev_x + [0, 0, -1, 1][self.prev_a]
                     expected_z = prev_z + [-1, 1, 0, 0][self.prev_a]
@@ -642,7 +642,7 @@ class deepQAgent(object):
                 else:
                     print()
                 #input("Press Enter to continue...")
-                
+
                 vision = obs['vision']
                 encode = list()
                 for block in vision:
@@ -661,9 +661,9 @@ class deepQAgent(object):
                 for surrounding in [(-1,-1), (-1, 0), (-1, 1), (0, -1), (0, 0), (0, 1), (1, -1), (1, 0), (1,1)]:
                     if (int(curr_x) + surrounding[0], int(curr_z) + surrounding[1]) not in self.visited:
                         visits.append(0)
-                    else: 
+                    else:
                         visits.append(1)
-                
+
                 emb = self.one_hot(torch.tensor(encode), len(self.block_list))
 #                print(emb)
 #                next_state = emb.flatten()
@@ -683,8 +683,8 @@ class deepQAgent(object):
 #                print(encode)
 #                print(self.one_hot(torch.tensor(encode), len(self.block_list)).float())
 #                next_state = self.one_hot(torch.tensor(encode), len(self.block_list)).t().float()
-                
-                
+
+
 #                visits = list()
 ##                print(self.visited)
 #                if (int(curr_x), int(curr_z)) not in self.visited:
@@ -696,13 +696,13 @@ class deepQAgent(object):
 #                for surrounding in [(-1,-1), (-1, 0), (-1, 1), (0, -1), (0, 0), (0, 1), (1, -1), (1, 0), (1,1)]:
 #                    if (int(curr_x) + surrounding[0], int(curr_z) + surrounding[1]) not in self.visited:
 #                        visits.append(0)
-#                    else: 
+#                    else:
 #                        visits.append(1)
-#                
+#
 #                state_info.append(visits)
-#                
+#
 #                print(state_info)
-                
+
 #                visit_tensor = torch.as_tensor(visits).unsqueeze(0)
 #                next_state = torch.cat((next_state, visit_tensor)).t().unsqueeze(0)
 #                print(state)
@@ -711,10 +711,10 @@ class deepQAgent(object):
                 current_r += discovery_reward
 #                print(current_r)
 #                print(next_state)
-#                
+#
 #                if count == 10:
 #                    print(prev)
-                
+
                 prev_x = curr_x
                 prev_z = curr_z
 
@@ -752,7 +752,7 @@ class deepQAgent(object):
 #                time.sleep(0.5)
 
                 current_r = 0
-                
+
                 count += 1
 
 
@@ -762,7 +762,7 @@ class deepQAgent(object):
         total_reward += current_r
 
         #obs = json.loads(agent_host.getWorldState().observations[-1].text)
-        
+
         state = np.array([int(obs[u'XPos']),
                           int(obs[u'ZPos'])])
         # update Q values
@@ -779,15 +779,15 @@ class deepQAgent(object):
         print('updated epsilon: ', self.epsilon)
         print()
 
-        self.drawQ(curr_x = int(obs[u'XPos']), curr_y = int(obs[u'ZPos']))
+        self.drawQ(curr_x = int(obs[u'XPos']), curr_y = int(obs[u'ZPos']), action_values=self.action_values_old)
 
         return total_reward
-    
+
     def one_hot(self, batch, depth):
         emb = nn.Embedding(depth, depth)
         emb.weight.data = torch.eye(depth)
         return emb(batch)
-    
+
     def emb(self, state_info):
         emb = nn.Embedding(len(state_info[0]), 1)
         return emb(state_info)
@@ -833,10 +833,10 @@ def add_enemies(arena_width,arena_height):
     xml = ""
     # add more enemies, but avoid end goal
     used_pos = set((arena_width, arena_height-3))
-    
+
     smaller_dim = min(arena_width, arena_height)
     enemies = (smaller_dim-1)//3
-    
+
     for i in range(enemies):
         while True:
             x = random.randint(2, arena_width)
@@ -846,7 +846,7 @@ def add_enemies(arena_width,arena_height):
                 z = random.randint(0, arena_height-4)
             if (x,z) not in used_pos:
                 break
-        
+
         used_pos.add((x,z))
         xml += '''<DrawCuboid x1="''' + str(x) + '''" y1="45" z1="''' + str(z) + '''" x2="''' + str(x-2) + '''" y2="45" z2="''' + str(z+2) + '''" type="red_sandstone"/>'''
         xml += '''<DrawEntity x="''' + str(x-0.5) + '''" y="45" z="''' + str(z+1.5) + '''"  type="Villager" />'''
@@ -999,7 +999,7 @@ try:
 except KeyError:
     print("MALMO_XSD_PATH not set? Check environment.")
     exit(1)
-    
+
 mission_file = os.path.abspath(os.path.join(schema_dir, '..',
                                             'sample_missions', 'cliff_walking_1.xml'))  # Integration test path
 
