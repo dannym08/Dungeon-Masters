@@ -75,7 +75,11 @@ class DQN(nn.Module):
         # plus the previous six moves it has made so that it "perceive" movement
         # plus the 2 corrdinates of the agent's location
         # same reasoning as above but without the visited information
-        self.D_in = 9 * 8 + 2 + 2
+        #self.D_in = 9 * 8 + 2 + 2
+
+        #D_in = input dimension = (vision(9) * length of block_list(8)) * (1 current state + 2 past states))
+        self.D_in = (9 * 8) * (1 + 2)
+
         # H = hidden dimension, use a number between input and output dimension
         self.H = 50
         # D_out = output dimension = 4: 4 directions of move
@@ -206,6 +210,8 @@ class deepQAgent(object):
         self.rep = 0
 
         self.action_values_old = list()
+
+        self.moves_temp = deque(maxlen=self.movement_memory*9)
 
     def step(self, state, action, reward, next_state):
 #        print()
@@ -377,11 +383,11 @@ class deepQAgent(object):
 #                                                       torch.as_tensor(visits).float())),
 #                                            torch.as_tensor(self.moves).float())),
 #                                 torch.tensor([int(curr_x), int(curr_z)]).float()))
-        input_state = torch.cat((torch.cat((emb.flatten(), torch.as_tensor(self.moves).float())),
-                                 torch.tensor([int(curr_x), int(curr_z)]).float()))
+        input_state = torch.cat((emb.flatten(), self.moves))
 
 
         print("Input State: " + str(input_state))
+        print(len(input_state))
         #input("Enter...")
 #        print(emb_np)
 #        print()
@@ -477,8 +483,11 @@ class deepQAgent(object):
             break
 
 #        self.moves.append(action)
-        self.moves.append(int(curr_x))
-        self.moves.append(int(curr_z))
+        #self.moves.append(int(curr_x))
+        #self.moves.append(int(curr_z))
+        self.moves_temp.extend(encode)
+        self.moves = self.one_hot(torch.tensor(self.moves_temp), len(self.block_list)).flatten()
+
 
 #        self.recent_actions.append(action)
 #        print(self.recent_actions)
@@ -531,12 +540,17 @@ class deepQAgent(object):
         
 #        self.visited = set() # always have starting position set to visited
 #        self.visited.add((4, 1))
-        self.moves = deque(maxlen=self.movement_memory)
-        for i in range(self.movement_memory):
+        #self.moves = deque(maxlen=self.movement_memory)
+        #self.moves_temp = list()
+        for i in range(self.movement_memory*9): #9 for vision radius
 #            self.moves.append(-1)
-            self.moves.append(4)
-            self.moves.append(1)
-
+            #self.moves.append(4)
+            #self.moves.append(1)
+            self.moves_temp.append(0)
+        print(self.moves_temp)
+        self.moves = self.one_hot(torch.tensor(self.moves_temp), len(self.block_list)).flatten()
+        print("self.moves = " + str(self.moves))
+        print(len(self.moves))
         # wait for a valid observation
         world_state = agent_host.peekWorldState()
         while world_state.is_mission_running and all(e.text == '{}' for e in world_state.observations):
@@ -690,8 +704,7 @@ class deepQAgent(object):
 #                                                              torch.as_tensor(visits).float())),
 #                                                   torch.as_tensor(self.moves).float())),
 #                                        torch.tensor([int(curr_x), int(curr_z)]).float()))
-                next_state = torch.cat((torch.cat((emb.flatten(), torch.as_tensor(self.moves).float())),
-                                         torch.tensor([int(curr_x), int(curr_z)]).float()))
+                next_state = torch.cat((emb.flatten(), self.moves))
 #                print(next_state)
 #                state_info = list()
 #                state_info.append(vision)
