@@ -74,7 +74,7 @@ class DQN(nn.Module):
         # plus a boolean for each block to denote if they have been visited
         # plus the previous six moves it has made so that it "perceive" movement
         # plus the 2 corrdinates of the agent's location
-        self.D_in = 9 * 6 + 9 + 6 + 2
+        self.D_in = 9 * 8 + 9 + 6 + 2
 
         # H = hidden dimension, use a number between input and output dimension
         self.H = 50
@@ -151,7 +151,8 @@ class deepQAgent(object):
     """Deep Q-learning agent for discrete state/action spaces."""
     def __init__(self, actions=[], learning_rate=0.1, tau=0.1, epsilon=1.0, gamma=0.99, debug=False, canvas=None, root=None):
         
-        self.block_list = ['sandstone', 'gold_block', 'red_sandstone', 'lapis_block', 'cobblestone', 'grass']               # all types of blocks agent can see
+        self.block_list = ['sandstone', 'gold_block', 'red_sandstone', 'lapis_block',
+                           'cobblestone', 'grass', 'lava', 'flowing_lava']               # all types of blocks agent can see
         self.buffer_size = int(1e5)             # replay buffer size
         self.batch_size = 64                    # minibatch size
         self.learning_rate = learning_rate      # learning rate
@@ -246,10 +247,12 @@ class deepQAgent(object):
 #        print(rewards.size())
 #        print(rewards)
 #        print(gamma * next_action)
-        targets = rewards + (gamma * torch.Tensor(next_action)).unsqueeze(1)
+        targets = rewards + (gamma * torch.Tensor(next_action))
 #        print(torch.Tensor(next_action))
 #        print(gamma * torch.Tensor(next_action))
-#        print((gamma * torch.Tensor(next_action)).unsqueeze(1).size())
+#        print((gamma * torch.Tensor(next_action)))
+#        print((gamma * torch.Tensor(next_action)).size())
+#        print(rewards.size())
 #        print("targets")
 #        print(targets)
 #        print(targets.size())
@@ -267,10 +270,14 @@ class deepQAgent(object):
 #        print(policy.size())
 #        print(policy)
 #        
-        
+#        print(policy)
+#        print(policy.size())
+#        print(targets)
+#        print(targets.size())
         # Compute loss
         loss = F.mse_loss(policy, targets)
 #        print(loss)
+#        print(prev)
         # Minimize the loss
         self.optimizer.zero_grad()
         loss.backward()
@@ -292,7 +299,6 @@ class deepQAgent(object):
             
     def act(self, world_state, agent_host):
         """Returns actions for given state as per current policy."""
-        time.sleep(0.1)
         visits = list()
         obs_text = world_state.observations[-1].text
         obs = json.loads(obs_text)  # most recent observation
@@ -314,7 +320,11 @@ class deepQAgent(object):
         curr_x = xpos
         curr_z = zpos
         
-        vision = obs['vision']
+
+        try:
+            vision = obs['vision']
+        except KeyError:
+            vision = [0,0,0,0,0,0,0,0,0] # 9 zeros
         encode = list()
         for block in vision:
             encode.append(self.block_list.index(block))
@@ -402,29 +412,43 @@ class deepQAgent(object):
 #        print(np.average(action_values.cpu().data.numpy(),axis=1))
 #        print(np.argmax(np.average(action_values.cpu().data.numpy(),axis=1)))
 
+        _i = 0
+        print("Test Knowledge: "+str(test_knowledge))
+        print("Vision: "+"\n"+
+              str(vision[0:3])+"\n"+
+              str(vision[3:6])+"\n"+
+              str(vision[6:9])+"\n")
         while True:
-            if random.random() > self.epsilon:
+            if ((random.random() > self.epsilon) or (test_knowledge and _i < 5)):
                 # t.max(1) will return largest column value of each row.
                 # second column on max result is index of where max element was
                 # found, so we pick action with the larger expected reward.
                 print("Optimal action: ", end="")
+                print(action_values)
                 action = action_values.max(0)[0].max(0)[0].view(1, 1)
+                print(action)
+                action_list = list(action_values)
+                action = torch.tensor([[action_list.index(action)]])
 #                action = np.average(action_values.cpu().data.numpy(),axis=1)
 #                action = np.argmax(action_values.cpu().data.numpy())
             else:
                 print("Random action: ", end="")
                 action = torch.tensor([[random.randrange(self.action_size)]])
 #                action = random.choice(np.arange(self.action_size))
+            print(action,self.actions[action])
             if( (action == 0 and vision[1] != 'gold_block') or (action == 1 and vision[7] != 'gold_block') or
                 (action == 2 and vision[3] != 'gold_block') or (action == 3 and vision[5] != 'gold_block') ):
                 break
+            else:
+                print("abort (wall)")
+            _i += 1
         
         self.moves.append(action)
 #        self.recent_actions.append(action)
 #        print(self.recent_actions)
 #        print(input_state)
 #        print(np.argmax(action_values.cpu().data.numpy()))
-        print(action)
+#        print(action)
 #        print(np.average(action_values.cpu().data.numpy(),axis=1))
 #        print(np.argmax(np.average(action_values.cpu().data.numpy(),axis=1)))
 #        print(self.actions)
@@ -453,7 +477,7 @@ class deepQAgent(object):
             
         return input_state, action
     
-    def run(self, agent_host):
+    def run(self, agent_host, test_knowledge):
         """Run agent on current world"""
 
         total_reward = 0
@@ -521,7 +545,7 @@ class deepQAgent(object):
         while world_state.is_mission_running:
             
             state, action = self.act(world_state, agent_host)
-            
+            #input("Press Enter to continue...")
             # wait for the position to have changed and a reward received
             print('Waiting for data...', end=' ')
             while True:
@@ -671,7 +695,9 @@ class deepQAgent(object):
 
 
                 # place move into memory and update NN if necessary
-                agent.step(state, action, current_r, next_state)
+                total_reward += current_r
+
+                agent.step(state, action, total_reward, next_state)
 
                 ### SPECIAL ###
                 # Here, we can replace our current spot with a normal block
@@ -695,9 +721,11 @@ class deepQAgent(object):
 
                 ### END ###
 
-                print("reward for this step: ", current_r)
 
-                total_reward += current_r
+#                print("current reward for this step: ", current_r)
+#                print("total reward for this step: ", total_reward)
+#                time.sleep(0.5)
+
                 current_r = 0
                 
                 count += 1
@@ -803,7 +831,7 @@ def XML_generator(x,y):
                   </About>
                   
                   <ModSettings>
-                    <MsPerTick>50</MsPerTick>
+                    <MsPerTick>80</MsPerTick>
                   </ModSettings>
                 
                   <ServerSection>
@@ -843,7 +871,7 @@ def XML_generator(x,y):
                           '''+ add_items(arena_width, arena_height, agent_host.getIntArgument('i')) + '''
                 		  
                       </DrawingDecorator>
-                      <ServerQuitFromTimeUp timeLimitMs="30000"/>
+                      <ServerQuitFromTimeUp timeLimitMs="10000"/>
                       <ServerQuitWhenAnyAgentFinishes/>
                     </ServerHandlers>
                   </ServerSection>
@@ -866,8 +894,8 @@ def XML_generator(x,y):
                           </Grid>
                       </ObservationFromGrid>
                       <VideoProducer want_depth="false">
-                          <Width>640</Width>
-                          <Height>480</Height>
+                          <Width>160</Width>
+                          <Height>120</Height>
                       </VideoProducer>
                       <DiscreteMovementCommands>
                           <ModifierList type="deny-list">
@@ -1024,10 +1052,14 @@ try:
                     print("Error:", error.text)
             print()
 
+
             # -- run the agent in the world -- #
-            cumulative_reward = agent.run(agent_host)
+            test_knowledge = True if i % 5 == 0 else False
+
+            cumulative_reward = agent.run(agent_host, test_knowledge)
             print('Cumulative reward: %d' % cumulative_reward)
             cumulative_rewards += [cumulative_reward]
+
 
             # -- clean up -- #
             time.sleep(2)  # (let the Mod reset)
