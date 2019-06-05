@@ -74,7 +74,7 @@ class DQN(nn.Module):
         # plus a boolean for each block to denote if they have been visited
         # plus the previous six moves it has made so that it "perceive" movement
         # plus the 2 corrdinates of the agent's location
-        self.D_in = 9 * 8 + 9 + 6 + 2
+        self.D_in = 9 * 8 + 9 + 4 + 2
 
         # H = hidden dimension, use a number between input and output dimension
         self.H = 50
@@ -160,9 +160,9 @@ class deepQAgent(object):
         self.epsilon= epsilon                   # inital epsilon-greedy
         self.epsilon_decay = 0.00009              # how quickly to decay epsilon
         self.gamma = gamma                      # discount factor
-        self.update_every = 8                   # how often we updated the nn
+        self.update_every = 32                   # how often we updated the nn
         self.action_size = len(actions)
-        self.movement_memory = 6
+        self.movement_memory = 4
         
         # running PyTorch on cpu
         self.device = torch.device('cpu')
@@ -971,11 +971,11 @@ def XML_generator(x,y):
                       <RewardForTouchingBlockType>
                         <Block reward="-10000.0" type="lava" behaviour="onceOnly"/>
                         <Block reward="1000.0" type="lapis_block" behaviour="onceOnly"/>
-                        <Block reward="-100.0" type="red_sandstone" behaviour="onceOnly"/>
+                        <Block reward="-1000.0" type="red_sandstone" behaviour="onceOnly"/>
                         <Block reward="0.0" type="gold_block"/>
-                        <Block reward="100" type="grass" />
+                        <Block reward="200" type="grass" />
                       </RewardForTouchingBlockType>
-                      <RewardForSendingCommand reward="-1"/>
+                      <RewardForSendingCommand reward="0"/>
                       <AgentQuitFromTouchingBlockType>
                           <Block type="lava" />
                           <Block type="lapis_block" />
@@ -1081,7 +1081,7 @@ try:
         my_mission.removeAllCommandHandlers()
         my_mission.allowAllChatCommands()
         my_mission.allowAllDiscreteMovementCommands()
-        my_mission.requestVideo(640, 480)
+        my_mission.requestVideo(320, 240)
         my_mission.setViewpoint(1)
 
         my_clients = MalmoPython.ClientPool()
