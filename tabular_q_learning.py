@@ -73,7 +73,9 @@ class DQN(nn.Module):
         # plus a boolean for each block to denote if they have been visited
         # plus the previous six moves it has made so that it "perceive" movement
         # plus the 2 corrdinates of the agent's location
-        self.D_in = 9 * 5 + 9 + 6 + 2
+#        self.D_in = 9 * 5 + 9 + 6 + 2
+        # same reasoning as above but without the visited information
+        self.D_in = 9 * 5 + 6 + 2
         # H = hidden dimension, use a number between input and output dimension
         self.H = 50
         # D_out = output dimension = 4: 4 directions of move
@@ -296,7 +298,6 @@ class deepQAgent(object):
     def act(self, world_state, agent_host):
         """Returns actions for given state as per current policy."""
         
-        visits = list()
         obs_text = world_state.observations[-1].text
         obs = json.loads(obs_text)  # most recent observation
 #        print(obs)
@@ -324,13 +325,13 @@ class deepQAgent(object):
             encode.append(self.block_list.index(block))
 #        input_state = self.one_hot(torch.tensor(encode), len(encode)).flatten()       .float()
 #        print(input_state)
-        visits = list()
-#        print(self.visited)
-        for surrounding in [(-1,-1), (-1, 0), (-1, 1), (0, -1), (0, 0), (0, 1), (1, -1), (1, 0), (1,1)]:
-            if (int(curr_x) + surrounding[0], int(curr_z) + surrounding[1]) not in self.visited:
-                visits.append(0)
-            else: 
-                visits.append(1)
+#        visits = list()
+##        print(self.visited)
+#        for surrounding in [(-1,-1), (-1, 0), (-1, 1), (0, -1), (0, 0), (0, 1), (1, -1), (1, 0), (1,1)]:
+#            if (int(curr_x) + surrounding[0], int(curr_z) + surrounding[1]) not in self.visited:
+#                visits.append(0)
+#            else: 
+#                visits.append(1)
         
         emb = self.one_hot(torch.tensor(encode), len(self.block_list))
 #        print(emb)
@@ -342,9 +343,11 @@ class deepQAgent(object):
 #        print(emb.flatten())
 #        print(torch.cat((emb.flatten(), torch.as_tensor(visits).float())))
 #        input_state = torch.cat((emb.flatten(), torch.as_tensor(visits).float()))
-        input_state = torch.cat((torch.cat((torch.cat((emb.flatten(),
-                                                       torch.as_tensor(visits).float())),
-                                            torch.as_tensor(self.moves).float())),
+#        input_state = torch.cat((torch.cat((torch.cat((emb.flatten(),
+#                                                       torch.as_tensor(visits).float())),
+#                                            torch.as_tensor(self.moves).float())),
+#                                 torch.tensor([int(curr_x), int(curr_z)]).float()))
+        input_state = torch.cat((torch.cat((emb.flatten(), torch.as_tensor(self.moves).float())),
                                  torch.tensor([int(curr_x), int(curr_z)]).float()))
 #        print(input_state)
 #        print(emb_np)
@@ -417,7 +420,9 @@ class deepQAgent(object):
                 (action == 2 and vision[3] != 'gold_block') or (action == 3 and vision[5] != 'gold_block') ):
                    break
         
-        self.moves.append(action)
+#        self.moves.append(action)
+        self.moves.append(int(curr_x))
+        self.moves.append(int(curr_z))
 #        self.recent_actions.append(action)
 #        print(self.recent_actions)
 #        print(input_state)
@@ -464,11 +469,13 @@ class deepQAgent(object):
         self.action = None
         self.next_state = None
         
-        self.visited = set() # always have starting position set to visited
-        self.visited.add((4, 1))
+#        self.visited = set() # always have starting position set to visited
+#        self.visited.add((4, 1))
         self.moves = deque(maxlen=self.movement_memory)
         for i in range(self.movement_memory):
-            self.moves.append(-1)
+#            self.moves.append(-1)
+            self.moves.append(4)
+            self.moves.append(1)
         
 
         # wait for a valid observation
@@ -598,30 +605,32 @@ class deepQAgent(object):
                     encode.append(self.block_list.index(block))
 #                input_state = self.one_hot(torch.tensor(encode), len(encode)).flatten()       .float()
 #                print(input_state)
-                visits = list()
-#                print(self.visited)
-#                print(self.visited)
-                if (int(curr_x), int(curr_z)) not in self.visited:
-                    discovery_reward = 5
-                    self.visited.add((int(curr_x), int(curr_z)))
-                else:
-                    discovery_reward = 0
-#                print(self.visited)
-                for surrounding in [(-1,-1), (-1, 0), (-1, 1), (0, -1), (0, 0), (0, 1), (1, -1), (1, 0), (1,1)]:
-                    if (int(curr_x) + surrounding[0], int(curr_z) + surrounding[1]) not in self.visited:
-                        visits.append(0)
-                    else: 
-                        visits.append(1)
+#                visits = list()
+##                print(self.visited)
+##                print(self.visited)
+#                if (int(curr_x), int(curr_z)) not in self.visited:
+#                    discovery_reward = 0
+#                    self.visited.add((int(curr_x), int(curr_z)))
+#                else:
+#                    discovery_reward = 0
+##                print(self.visited)
+#                for surrounding in [(-1,-1), (-1, 0), (-1, 1), (0, -1), (0, 0), (0, 1), (1, -1), (1, 0), (1,1)]:
+#                    if (int(curr_x) + surrounding[0], int(curr_z) + surrounding[1]) not in self.visited:
+#                        visits.append(0)
+#                    else: 
+#                        visits.append(1)
                 
                 emb = self.one_hot(torch.tensor(encode), len(self.block_list))
 #                print(emb)
 #                next_state = emb.flatten()
 #                print(next_state)
 #                next_state = torch.cat((emb.flatten(), torch.as_tensor(visits).float()))
-                next_state = torch.cat((torch.cat((torch.cat((emb.flatten(),
-                                                              torch.as_tensor(visits).float())),
-                                                   torch.as_tensor(self.moves).float())),
-                                        torch.tensor([int(curr_x), int(curr_z)]).float()))
+#                next_state = torch.cat((torch.cat((torch.cat((emb.flatten(),
+#                                                              torch.as_tensor(visits).float())),
+#                                                   torch.as_tensor(self.moves).float())),
+#                                        torch.tensor([int(curr_x), int(curr_z)]).float()))
+                next_state = torch.cat((torch.cat((emb.flatten(), torch.as_tensor(self.moves).float())),
+                                         torch.tensor([int(curr_x), int(curr_z)]).float()))
 #                print(next_state)
 #                state_info = list()
 #                state_info.append(vision)
@@ -657,7 +666,7 @@ class deepQAgent(object):
 #                print(state)
 #                print(action)
 #                print(current_r)
-                current_r += discovery_reward
+#                current_r += discovery_reward
 #                print(current_r)
 #                print(next_state)
 #                
@@ -864,8 +873,8 @@ agent_host.addOptionalFloatArgument('gamma', 'Discount factor.', 0.99)
 agent_host.addOptionalFlag('load_model', 'Load initial model from model_file.')
 agent_host.addOptionalStringArgument('model_file', 'Path to the initial model file', '')
 agent_host.addOptionalFlag('debug', 'Turn on debugging.')
-agent_host.addOptionalIntArgument('x','The width of the arena.',18)
-agent_host.addOptionalIntArgument('y','The width of the arena.',16)
+agent_host.addOptionalIntArgument('x','The width of the arena.',10)
+agent_host.addOptionalIntArgument('y','The width of the arena.',10)
 
 malmoutils.parse_command_line(agent_host)
 
