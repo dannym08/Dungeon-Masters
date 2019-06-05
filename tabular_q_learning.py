@@ -75,7 +75,7 @@ class DQN(nn.Module):
         # plus the previous six moves it has made so that it "perceive" movement
         # plus the 2 corrdinates of the agent's location
         # same reasoning as above but without the visited information
-        self.D_in = 9 * 8 + 6 + 2
+        self.D_in = 9 * 8 + 2 + 2
         # H = hidden dimension, use a number between input and output dimension
         self.H = 50
         # D_out = output dimension = 4: 4 directions of move
@@ -162,7 +162,7 @@ class deepQAgent(object):
         self.gamma = gamma                      # discount factor
         self.update_every = 5                   # how often we updated the nn
         self.action_size = len(actions)
-        self.movement_memory = 6
+        self.movement_memory = 2
 
         # running PyTorch on cpu
         self.device = torch.device('cpu')
