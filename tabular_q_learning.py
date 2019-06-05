@@ -381,7 +381,8 @@ class deepQAgent(object):
                                  torch.tensor([int(curr_x), int(curr_z)]).float()))
 
 
-#        print(input_state)
+        print("Input State: " + str(input_state))
+        #input("Enter...")
 #        print(emb_np)
 #        print()
 #
@@ -658,9 +659,10 @@ class deepQAgent(object):
                 #input("Press Enter to continue...")
 
                 vision = obs['vision']
-                encode = list()
-                for block in vision:
-                    encode.append(self.block_list.index(block))
+                encode = encode_observations(vision)
+                #encode = list()
+                #for block in vision:
+                #    encode.append(self.block_list.index(block))
 #                input_state = self.one_hot(torch.tensor(encode), len(encode)).flatten()       .float()
 #                print(input_state)
 
