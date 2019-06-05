@@ -951,88 +951,95 @@ if agent_host.receivedArgument("test"):
 else:
     num_maps = 30000
 
-for imap in range(num_maps):
+try:
+    for imap in range(num_maps):
 
-    # -- set up the agent -- #
-    actionSet = ["movenorth 1", "movesouth 1", "movewest 1", "moveeast 1"]
+        # -- set up the agent -- #
+        actionSet = ["movenorth 1", "movesouth 1", "movewest 1", "moveeast 1"]
 
-#    agent = TabQAgent(
-#        actions=actionSet,
-#        epsilon=agent_host.getFloatArgument('epsilon'),
-#        alpha=agent_host.getFloatArgument('alpha'),
-#        gamma=agent_host.getFloatArgument('gamma'),
-#        debug=agent_host.receivedArgument("debug"),
-#        canvas=canvas,
-#        root=root)
-    
-    agent = deepQAgent( actions=actionSet,
-                        learning_rate=agent_host.getFloatArgument('alpha'),
-                        tau=agent_host.getFloatArgument('tau'),
-                        epsilon=agent_host.getFloatArgument('epsilon'),
-                        gamma=agent_host.getFloatArgument('gamma'),
-                        debug=agent_host.receivedArgument("debug"),
-                        canvas=canvas,
-                        root=root)
-    
+    #    agent = TabQAgent(
+    #        actions=actionSet,
+    #        epsilon=agent_host.getFloatArgument('epsilon'),
+    #        alpha=agent_host.getFloatArgument('alpha'),
+    #        gamma=agent_host.getFloatArgument('gamma'),
+    #        debug=agent_host.receivedArgument("debug"),
+    #        canvas=canvas,
+    #        root=root)
+
+        agent = deepQAgent( actions=actionSet,
+                            learning_rate=agent_host.getFloatArgument('alpha'),
+                            tau=agent_host.getFloatArgument('tau'),
+                            epsilon=agent_host.getFloatArgument('epsilon'),
+                            gamma=agent_host.getFloatArgument('gamma'),
+                            debug=agent_host.receivedArgument("debug"),
+                            canvas=canvas,
+                            root=root)
 
 
-    # -- set up the mission -- #
-    mission_xml = XML_generator(x=world_x,y=world_y)
-    my_mission = MalmoPython.MissionSpec(mission_xml, True)
-    my_mission.removeAllCommandHandlers()
-    my_mission.allowAllChatCommands()
-    my_mission.allowAllDiscreteMovementCommands()
-    my_mission.requestVideo(640, 480)
-    my_mission.setViewpoint(1)
 
-    my_clients = MalmoPython.ClientPool()
-    my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10000))  # add Minecraft machines here as available
+        # -- set up the mission -- #
+        mission_xml = XML_generator(x=world_x,y=world_y)
+        my_mission = MalmoPython.MissionSpec(mission_xml, True)
+        my_mission.removeAllCommandHandlers()
+        my_mission.allowAllChatCommands()
+        my_mission.allowAllDiscreteMovementCommands()
+        my_mission.requestVideo(640, 480)
+        my_mission.setViewpoint(1)
 
-    max_retries = 3
-    agentID = 0
-    expID = 'deep_q_learning'
+        my_clients = MalmoPython.ClientPool()
+        my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10000))  # add Minecraft machines here as available
 
-    num_repeats = 15000
-    cumulative_rewards = []
-    for i in range(num_repeats):
+        max_retries = 3
+        agentID = 0
+        expID = 'deep_q_learning'
 
-        print("\nMap %d - Mission %d of %d:" % (imap, i + 1, num_repeats))
+        num_repeats = 15000
+        cumulative_rewards = []
+        for i in range(num_repeats):
 
-        my_mission_record = malmoutils.get_default_recording_object(agent_host,
-                                                                    "./save_%s-map%d-rep%d" % (expID, imap, i))
+            print("\nMap %d - Mission %d of %d:" % (imap, i + 1, num_repeats))
 
-        for retry in range(max_retries):
-            try:
-                agent_host.startMission(my_mission, my_clients, my_mission_record, agentID, "%s-%d" % (expID, i))
-                break
-            except RuntimeError as e:
-                if retry == max_retries - 1:
-                    print("Error starting mission:", e)
-                    exit(1)
-                else:
-                    print("here?")
-                    time.sleep(2.5)
+            my_mission_record = malmoutils.get_default_recording_object(agent_host,
+                                                                        "./save_%s-map%d-rep%d" % (expID, imap, i))
 
-        print("Waiting for the mission to start", end=' ')
-        world_state = agent_host.getWorldState()
-        while not world_state.has_mission_begun:
-            print(".", end="")
-            time.sleep(0.1)
+            for retry in range(max_retries):
+                try:
+                    agent_host.startMission(my_mission, my_clients, my_mission_record, agentID, "%s-%d" % (expID, i))
+                    break
+                except RuntimeError as e:
+                    if retry == max_retries - 1:
+                        print("Error starting mission:", e)
+                        exit(1)
+                    else:
+                        print("here?")
+                        time.sleep(2.5)
+
+            print("Waiting for the mission to start", end=' ')
             world_state = agent_host.getWorldState()
-            for error in world_state.errors:
-                print("Error:", error.text)
+            while not world_state.has_mission_begun:
+                print(".", end="")
+                time.sleep(0.1)
+                world_state = agent_host.getWorldState()
+                for error in world_state.errors:
+                    print("Error:", error.text)
+            print()
+
+            # -- run the agent in the world -- #
+            cumulative_reward = agent.run(agent_host)
+            print('Cumulative reward: %d' % cumulative_reward)
+            cumulative_rewards += [cumulative_reward]
+
+            # -- clean up -- #
+            time.sleep(2)  # (let the Mod reset)
+
+        print("Done.")
+
         print()
-
-        # -- run the agent in the world -- #
-        cumulative_reward = agent.run(agent_host)
-        print('Cumulative reward: %d' % cumulative_reward)
-        cumulative_rewards += [cumulative_reward]
-
-        # -- clean up -- #
-        time.sleep(2)  # (let the Mod reset)
-
-    print("Done.")
-
-    print()
-    print("Cumulative rewards for all %d runs:" % num_repeats)
-    print(cumulative_rewards)
+        print("Cumulative rewards for all %d runs:" % num_repeats)
+        print(cumulative_rewards)
+except KeyboardInterrupt as e:
+    print("KeyboardInterrupt detected: aborting...")
+finally:
+    print("Saving model file to same directory...")
+    torch.save(agent.state_dict(), "./model.pth")
+    print("Saved model.pth file!")
