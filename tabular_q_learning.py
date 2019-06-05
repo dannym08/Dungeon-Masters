@@ -149,7 +149,7 @@ class ReplayBuffer:
 
 class deepQAgent(object):
     """Deep Q-learning agent for discrete state/action spaces."""
-    def __init__(self, actions=[], learning_rate=0.1, tau=0.1, epsilon=1.0, gamma=0.99, debug=False, canvas=None, root=None):
+    def __init__(self, actions=[], learning_rate=0.1, tau=0.1, epsilon=1.0, gamma=0.99, debug=False, canvas=None, root=None, target_file=None, policy_file=None):
         
         self.block_list = ['sandstone', 'gold_block', 'red_sandstone', 'lapis_block',
                            'cobblestone', 'grass', 'lava', 'flowing_lava']               # all types of blocks agent can see
@@ -171,6 +171,19 @@ class deepQAgent(object):
         self.policy_model = DQN()#.to(self.device)
         self.target_model = DQN()#.to(self.device)
         self.optimizer = optim.Adam(self.policy_model.parameters(), lr=self.learning_rate)
+
+        # if specified, read from target_file and policy_file
+        if target_file is not None:
+            self.target_model.load_state_dict(torch.load(target_file))
+            self.target_model.eval()
+            print("loaded target model from file!")
+            input("Press Enter to acknowledge...")
+
+        if policy_file is not None:
+            self.policy_model.load_state_dict(torch.load(target_file))
+            self.policy_model.eval()
+            print("loaded policy model from file!")
+            input("Press Enter to acknowledge...")
         
         # create memory
         self.memory = ReplayBuffer(self.buffer_size, self.batch_size)
@@ -191,6 +204,8 @@ class deepQAgent(object):
         self.root = root
 
         self.rep = 0
+
+        self.action_values_old = list()
     
     def step(self, state, action, reward, next_state):
 #        print()
@@ -340,6 +355,8 @@ class deepQAgent(object):
                 visits.append(1)
         
         emb = self.one_hot(torch.tensor(encode), len(self.block_list))
+
+        #self.emb_temp = deepcopy(emb)
 #        print(emb)
 #        input_state = emb.flatten()
 #        print(input_state)
@@ -354,6 +371,8 @@ class deepQAgent(object):
                                                        torch.as_tensor(visits).float())),
                                             torch.as_tensor(self.moves).float())),
                                  torch.tensor([int(curr_x), int(curr_z)]).float()))
+
+
 #        print(input_state)
 #        print(emb_np)
 #        print()
@@ -398,7 +417,11 @@ class deepQAgent(object):
         self.policy_model.eval()
         with torch.no_grad():
             action_values = self.policy_model(input_state)
+            self.action_values_old = deepcopy(action_values)
         self.policy_model.train()
+
+
+        self.drawQ( curr_x = int(obs[u'XPos']), curr_y = int(obs[u'ZPos']) , action_values = action_values)
         
 #        print(state)
 #        print(action_values)
@@ -436,12 +459,13 @@ class deepQAgent(object):
                 action = torch.tensor([[random.randrange(self.action_size)]])
 #                action = random.choice(np.arange(self.action_size))
             print(action,self.actions[action])
-            if( (action == 0 and vision[1] != 'gold_block') or (action == 1 and vision[7] != 'gold_block') or
-                (action == 2 and vision[3] != 'gold_block') or (action == 3 and vision[5] != 'gold_block') ):
-                break
-            else:
-                print("abort (wall)")
+            #if( (action == 0 and vision[1] != 'gold_block') or (action == 1 and vision[7] != 'gold_block') or
+            #    (action == 2 and vision[3] != 'gold_block') or (action == 3 and vision[5] != 'gold_block') ):
+            #    break
+            #else:
+            #    print("abort (wall)")
             _i += 1
+            break
         
         self.moves.append(action)
 #        self.recent_actions.append(action)
@@ -735,12 +759,15 @@ class deepQAgent(object):
         # process final reward
         self.logger.debug("Final reward: %d" % current_r)
         total_reward += current_r
+
+        #obs = json.loads(agent_host.getWorldState().observations[-1].text)
         
         state = np.array([int(obs[u'XPos']),
                           int(obs[u'ZPos'])])
         # update Q values
         state = torch.from_numpy(state).float().unsqueeze(0)#.to(self.device)
         self.policy_model.eval()
+        self.policy_model.train()
 
         # update epsilon for next run but don't let epsilon get below 0.01
         if self.epsilon > 0.01 or True: #override for test
@@ -750,6 +777,8 @@ class deepQAgent(object):
         print()
         print('updated epsilon: ', self.epsilon)
         print()
+
+        self.drawQ(curr_x = int(obs[u'XPos']), curr_y = int(obs[u'ZPos']))
 
         return total_reward
     
@@ -761,6 +790,43 @@ class deepQAgent(object):
     def emb(self, state_info):
         emb = nn.Embedding(len(state_info[0]), 1)
         return emb(state_info)
+
+    def drawQ( self, curr_x=None, curr_y=None ,action_values = None):
+        if self.canvas is None or self.root is None:
+            return
+        self.canvas.delete("all")
+        action_inset = 0.1
+        action_radius = 0.1
+        curr_radius = 0.2
+        action_positions = [ ( 0.5, 1-action_inset ), ( 0.5, action_inset ), ( 1-action_inset, 0.5 ), ( action_inset, 0.5 ) ]
+        # (NSWE to match action order)
+        for x in range(world_x):
+            for y in range(world_y):
+                s = "%d:%d" % (x,y)
+                self.canvas.create_rectangle( (world_x-1-x)*scale, (world_y-1-y)*scale, (world_x-1-x+1)*scale, (world_y-1-y+1)*scale, outline="#fff", fill="#000")
+
+        if action_values is not None and curr_x is not None and curr_y is not None:
+            x = curr_x
+            y = curr_y
+            min_value = min(action_values)
+            max_value = max(action_values)
+            for action in range(4):
+                value = action_values[action]
+                color = int( 255 * ( value - min_value ) / ( max_value - min_value )) # map value to 0-255
+                color = max( min( color, 255 ), 0 ) # ensure within [0,255]
+                color_string = '#%02x%02x%02x' % (255-color, color, 0)
+                self.canvas.create_oval( (world_x - 1 - x + action_positions[action][0] - action_radius ) *scale,
+                                         (world_y - 1 - y + action_positions[action][1] - action_radius ) *scale,
+                                         (world_x - 1 - x + action_positions[action][0] + action_radius ) *scale,
+                                         (world_y - 1 - y + action_positions[action][1] + action_radius ) *scale,
+                                         outline=color_string, fill=color_string )
+        if curr_x is not None and curr_y is not None:
+            self.canvas.create_oval( (world_x - 1 - curr_x + 0.5 - curr_radius ) * scale,
+                                     (world_y - 1 - curr_y + 0.5 - curr_radius ) * scale,
+                                     (world_x - 1 - curr_x + 0.5 + curr_radius ) * scale,
+                                     (world_y - 1 - curr_y + 0.5 + curr_radius ) * scale,
+                                     outline="#fff", fill="#fff" )
+        self.root.update()
 
 def add_enemies(arena_width,arena_height):
     xml = ""
@@ -961,6 +1027,8 @@ agent_host.addOptionalFlag('debug', 'Turn on debugging.')
 agent_host.addOptionalIntArgument('x','The width of the arena.',18)
 agent_host.addOptionalIntArgument('y','The width of the arena.',16)
 agent_host.addOptionalIntArgument('i','The total number of small items in the arena (except the goal)', 5)
+agent_host.addOptionalStringArgument('policy_file', 'Load policy model from path','')
+agent_host.addOptionalStringArgument('target_file', 'Load target model from path','')
 
 malmoutils.parse_command_line(agent_host)
 
@@ -1001,7 +1069,9 @@ try:
                             gamma=agent_host.getFloatArgument('gamma'),
                             debug=agent_host.receivedArgument("debug"),
                             canvas=canvas,
-                            root=root)
+                            root=root,
+                            target_file=agent_host.getStringArgument("target_file") if len(agent_host.getStringArgument("target_file")) > 0 else None,
+                            policy_file=agent_host.getStringArgument("policy_file") if len(agent_host.getStringArgument("policy_file")) > 0 else None)
 
 
 
@@ -1073,5 +1143,6 @@ except KeyboardInterrupt as e:
     print("KeyboardInterrupt detected: aborting...")
 finally:
     print("Saving model file to same directory...")
-    torch.save(agent.state_dict(), "./model.pth")
+    torch.save(agent.policy_model.state_dict(), "./policy_model.pth")
+    torch.save(agent.target_model.state_dict(), "./target_model.pth")
     print("Saved model.pth file!")
