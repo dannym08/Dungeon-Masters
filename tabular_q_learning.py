@@ -78,7 +78,7 @@ class DQN(nn.Module):
         #self.D_in = 9 * 8 + 2 + 2
 
         #D_in = input dimension = (vision(9) * length of block_list(8)) * (1 current state + 2 past states))
-        self.D_in = (9 * 8) * (1 + 2)
+        self.D_in = (9 * 8) * (1+2)
 
         # H = hidden dimension, use a number between input and output dimension
         self.H = 50
@@ -99,6 +99,7 @@ class DQN(nn.Module):
         y_pred = self.output_layer(h_relu)
 #        print(y_pred)
         return y_pred
+
 
 class ReplayBuffer:
     """Fixed-size buffer to store experience tuples."""
@@ -158,13 +159,13 @@ class deepQAgent(object):
         self.block_list = ['sandstone', 'gold_block', 'red_sandstone', 'lapis_block',
                            'cobblestone', 'grass', 'lava', 'flowing_lava']               # all types of blocks agent can see
         self.buffer_size = int(1e5)             # replay buffer size
-        self.batch_size = 64                     # minibatch size
+        self.batch_size = 500                     # minibatch size
         self.learning_rate = learning_rate      # learning rate
         self.tau = tau                          # for soft update of target parameters
         self.epsilon= epsilon                   # inital epsilon-greedy
         self.epsilon_decay = 0.00009              # how quickly to decay epsilon
         self.gamma = gamma                      # discount factor
-        self.update_every = 5                   # how often we updated the nn
+        self.update_every = 3                   # how often we updated the nn
         self.action_size = len(actions)
         self.movement_memory = 2
 
@@ -173,7 +174,7 @@ class deepQAgent(object):
 
         # create network
         self.policy_model = DQN()#.to(self.device)
-        self.target_model = DQN()#.to(self.device)
+        self.target_model = deepcopy(self.policy_model)#DQN()#.to(self.device)
         self.optimizer = optim.Adam(self.policy_model.parameters(), lr=self.learning_rate)
 
         # if specified, read from target_file and policy_file
@@ -754,7 +755,8 @@ class deepQAgent(object):
                 # place move into memory and update NN if necessary
                 total_reward += current_r
 
-                agent.step(state, action, total_reward, next_state)
+                #agent.step(state, action, total_reward, next_state)
+                agent.step(state, action, current_r, next_state)
 
                 ### SPECIAL ###
                 # Here, we can replace our current spot with a normal block
@@ -825,8 +827,21 @@ class deepQAgent(object):
             self.epsilon -= self.epsilon_decay
         if self.epsilon < 0:
             self.epsilon = 0
+
+        # stochastic means we must lower alpha to 0 over time
+        if self.learning_rate > 0:
+            self.learning_rate -= 0.00003
+        if self.learning_rate < 0:
+            self.learning_rate = 0
+
+        #suggestion: raise gamma over time
+        if self.gamma < 0.99:
+            self.gamma += 0.00003
+        
         print()
         print('updated epsilon: ', self.epsilon)
+        print('updated alpha:   ', self.learning_rate)
+        print('updated gamma:   ', self.gamma)
         print()
 
         self.drawQ(curr_x = int(obs[u'XPos']), curr_y = int(obs[u'ZPos']), action_values=self.action_values_old)
@@ -1025,7 +1040,7 @@ def XML_generator(x,y):
                         <Block reward="0.0" type="gold_block"/>
                         <Block reward="200" type="grass" />
                       </RewardForTouchingBlockType>
-                      <RewardForSendingCommand reward="0"/>
+                      <RewardForSendingCommand reward="-1"/>
                       <AgentQuitFromTouchingBlockType>
                           <Block type="lava" />
                           <Block type="lapis_block" />
