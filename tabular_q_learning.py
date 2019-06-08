@@ -212,6 +212,8 @@ class deepQAgent(object):
 
         self.moves_temp = deque(maxlen=self.movement_memory*9)
 
+        self.drawQ_reward_history = defaultdict(str)
+
     def step(self, state, action, reward, next_state):
 #        print()
 #        print(state)
@@ -523,6 +525,8 @@ class deepQAgent(object):
         current_r = 0
         tol = 0.01
 
+        self.drawQ_reward_history = defaultdict(str)
+
 #        self.prev_s = None
 #        self.prev_a = None
         self.state = None
@@ -745,8 +749,12 @@ class deepQAgent(object):
                 # place move into memory and update NN if necessary
                 total_reward += current_r
 
-                #agent.step(state, action, total_reward, next_state)
-                agent.step(state, action, current_r, next_state)
+                agent.step(state, action, total_reward, next_state)
+                #agent.step(state, action, current_r, next_state)
+
+                # save the total reward in the drawQ_reward_history dictionary
+                # for drawQ
+                self.drawQ_reward_history[str(curr_x)+","+str(curr_z)] = total_reward
 
                 ### SPECIAL ###
                 # Here, we can replace our current spot with a normal block
@@ -783,6 +791,7 @@ class deepQAgent(object):
 
         # process final reward
         self.logger.debug("Final reward: %d" % current_r)
+        print("Final reward: %d" % current_r)
         total_reward += current_r
 
         #state = np.array([int(obs[u'XPos']),
@@ -793,6 +802,10 @@ class deepQAgent(object):
         #self.policy_model.eval()
         #self.policy_model.train()
 
+        # wait for a frame to arrive after that
+        num_frames_seen = world_state.number_of_video_frames_since_last_state
+        while world_state.is_mission_running and world_state.number_of_video_frames_since_last_state == num_frames_seen:
+            world_state = agent_host.peekWorldState()
         world_state = agent_host.getWorldState()
 
         x = obs[u'XPos']
@@ -811,6 +824,9 @@ class deepQAgent(object):
         obs[u'XPos'] = x
         obs[u'ZPos'] = z
         state, action = self.act(world_state, agent_host, old_obs=obs)
+        current_r = sum(r.getValue() for r in world_state.rewards)
+        agent.step(state, action, total_reward, next_state)
+        self.drawQ_reward_history[str(obs[u'XPos']) + "," + str(obs[u'ZPos'])] = total_reward
 
         # update epsilon for next run but don't let epsilon get below 0.01
         if self.epsilon > 0.01 or True: #override for test
@@ -834,7 +850,7 @@ class deepQAgent(object):
         print('updated gamma:   ', self.gamma)
         print()
 
-        self.drawQ(curr_x = int(obs[u'XPos']), curr_y = int(obs[u'ZPos']), action_values=self.action_values_old)
+        self.drawQ(curr_x = int(obs[u'XPos']), curr_y = int(obs[u'ZPos']))
 
         return total_reward
 
@@ -853,12 +869,20 @@ class deepQAgent(object):
         self.canvas.delete("all")
         action_inset = 0.1
         action_radius = 0.1
-        curr_radius = 0.2
+        curr_radius = 0.02
         action_positions = [ ( 0.5, 1-action_inset ), ( 0.5, action_inset ), ( 1-action_inset, 0.5 ), ( action_inset, 0.5 ) ]
+        #print(self.drawQ_reward_history.keys())
+        #input("...")
         # (NSWE to match action order)
         for x in range(world_x):
             for y in range(world_y):
                 self.canvas.create_rectangle( (world_x-1-x)*scale, (world_y-1-y)*scale, (world_x-1-x+1)*scale, (world_y-1-y+1)*scale, outline="#fff", fill="#000")
+                if str(x+0.5)+","+str(y+0.5) in self.drawQ_reward_history.keys():
+                    self.canvas.create_text((world_x - 1 - x + 0.5) * scale,
+                                            (world_y - 1 - y + 0.5) * scale,
+                                            text=str(self.drawQ_reward_history[str(x+0.5)+","+str(y+0.5)]),
+                                            fill="#fff")
+
 
         if action_values is not None and curr_x is not None and curr_y is not None:
             x = curr_x
@@ -874,13 +898,14 @@ class deepQAgent(object):
                                          (world_y - 1 - y + action_positions[action][1] - action_radius ) *scale,
                                          (world_x - 1 - x + action_positions[action][0] + action_radius ) *scale,
                                          (world_y - 1 - y + action_positions[action][1] + action_radius ) *scale,
-                                         outline=color_string, fill=color_string )
+                                         outline=color_string, fill=color_string, )
         if curr_x is not None and curr_y is not None:
             self.canvas.create_oval( (world_x - 1 - curr_x + 0.5 - curr_radius ) * scale,
                                      (world_y - 1 - curr_y + 0.5 - curr_radius ) * scale,
                                      (world_x - 1 - curr_x + 0.5 + curr_radius ) * scale,
                                      (world_y - 1 - curr_y + 0.5 + curr_radius ) * scale,
                                      outline="#fff", fill="#fff" )
+
         self.root.update()
 
 def add_enemies(arena_width,arena_height, used_pos):
@@ -1150,7 +1175,7 @@ try:
         my_mission.removeAllCommandHandlers()
         my_mission.allowAllChatCommands()
         my_mission.allowAllDiscreteMovementCommands()
-        my_mission.requestVideo(640, 480)
+        my_mission.requestVideo(320, 240)
         my_mission.setViewpoint(1)
 
         my_clients = MalmoPython.ClientPool()
@@ -1201,7 +1226,7 @@ try:
 
 
             # -- clean up -- #
-            time.sleep(2)  # (let the Mod reset)
+            time.sleep(1)  # (let the Mod reset)
 
         print("Done.")
 
