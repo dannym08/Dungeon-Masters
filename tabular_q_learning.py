@@ -976,7 +976,7 @@ def XML_generator(x,y):
                   </About>
                   
                   <ModSettings>
-                    <MsPerTick>80</MsPerTick>
+                    <MsPerTick>40</MsPerTick>
                   </ModSettings>
                 
                   <ServerSection>
