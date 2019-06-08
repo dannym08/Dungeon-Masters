@@ -80,11 +80,12 @@ class DQN(nn.Module):
         #D_in = input dimension = (vision(9) * length of block_list(8)) * (1 current state + 2 past states))
         self.D_in = (9 * 8) * (1+2)
 
-        # H = hidden dimension, use a number between input and output dimension
-        self.H = 50
         # D_out = output dimension = 4: 4 directions of move
-
         self.D_out = 4
+
+        # H = hidden dimension, use a number between input and output dimension
+        self.H = int((self.D_in + self.D_out) / 2)
+
 
         self.input_layer = nn.Linear(self.D_in, self.H)
         self.hidden_layer = nn.Linear(self.H, self.H)
@@ -159,7 +160,7 @@ class deepQAgent(object):
         self.block_list = ['sandstone', 'gold_block', 'red_sandstone', 'lapis_block',
                            'cobblestone', 'grass', 'lava', 'flowing_lava']               # all types of blocks agent can see
         self.buffer_size = int(1e5)             # replay buffer size
-        self.batch_size = 500                     # minibatch size
+        self.batch_size = 10                     # minibatch size
         self.learning_rate = learning_rate      # learning rate
         self.tau = tau                          # for soft update of target parameters
         self.epsilon= epsilon                   # inital epsilon-greedy
@@ -175,7 +176,7 @@ class deepQAgent(object):
         # create network
         self.policy_model = DQN()#.to(self.device)
         self.target_model = deepcopy(self.policy_model)#DQN()#.to(self.device)
-        self.optimizer = optim.Adam(self.policy_model.parameters(), lr=self.learning_rate)
+        self.optimizer = optim.Adadelta(self.policy_model.parameters(), lr=self.learning_rate)
 
         # if specified, read from target_file and policy_file
         if target_file is not None:
