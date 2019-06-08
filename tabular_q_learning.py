@@ -930,6 +930,8 @@ def add_enemies(arena_width,arena_height, used_pos):
         enemy_vision.add((x+1,z+1))
         enemy_vision.add((x,z+1))
         enemy_vision.add((x+1,z))
+        enemy_vision.add((x+1,z-1))
+        enemy_vision.add((x-1,z+1))
         enemy_vision.add((x-1,z-1))
         enemy_vision.add((x,z-1))
         enemy_vision.add((x-1,z))
@@ -1023,7 +1025,6 @@ def XML_generator(x,y):
                 
                           <DrawBlock  x="''' + str(arena_width) + '''"   y="45"  z="''' + str(arena_height-1) + '''" type="lapis_block" />                           <!-- the destination marker -->
                           <DrawItem   x="''' + str(arena_width) + '''"   y="46"  z="''' + str(arena_height-1) + '''" type="diamond" />                               <!-- another destination marker -->
-                          <DrawItem   x="6"   y="46"  z="0" type="diamond" />  
                 		  
                           <!-- Enemies -->
                           '''+ add_enemies(arena_width, arena_height, used_pos) + '''
