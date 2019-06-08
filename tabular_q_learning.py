@@ -925,19 +925,20 @@ def add_enemies(arena_width,arena_height, used_pos):
                 break
 
         used_pos.add((x,z))
-        enemy_vision.add((x+1,z+1))
         enemy_vision.add((x,z+1))
-        enemy_vision.add((x+1,z))
-        enemy_vision.add((x+1,z-1))
-        enemy_vision.add((x-1,z+1))
-        enemy_vision.add((x-1,z-1))
-        enemy_vision.add((x,z-1))
+        enemy_vision.add((x,z+2))
         enemy_vision.add((x-1,z))
+        enemy_vision.add((x-1,z+1))
+        enemy_vision.add((x-1,z+2))
+        enemy_vision.add((x-2,z))
+        enemy_vision.add((x-2,z+1))
+        enemy_vision.add((x-2,z+2))
         
         xml += '''<DrawCuboid x1="''' + str(x) + '''" y1="45" z1="''' + str(z) + '''" x2="''' + str(x-2) + '''" y2="45" z2="''' + str(z+2) + '''" type="red_sandstone"/>'''
         xml += '''<DrawEntity x="''' + str(x-0.5) + '''" y="45" z="''' + str(z+1.5) + '''"  type="Villager" />'''
     
     used_pos = used_pos.union(enemy_vision)
+    print(used_pos)
     return xml
 
 
@@ -1168,17 +1169,6 @@ try:
 
 
 
-        # -- set up the mission -- #
-        mission_xml = XML_generator(x=world_x,y=world_y)
-        my_mission = MalmoPython.MissionSpec(mission_xml, True)
-        my_mission.removeAllCommandHandlers()
-        my_mission.allowAllChatCommands()
-        my_mission.allowAllDiscreteMovementCommands()
-        my_mission.requestVideo(320, 240)
-        my_mission.setViewpoint(1)
-
-        my_clients = MalmoPython.ClientPool()
-        my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10000))  # add Minecraft machines here as available
 
         max_retries = 3
         agentID = 0
@@ -1188,6 +1178,18 @@ try:
         cumulative_rewards = []
         for i in range(num_repeats):
 
+            # -- set up the mission -- #
+            mission_xml = XML_generator(x=world_x,y=world_y)
+            my_mission = MalmoPython.MissionSpec(mission_xml, True)
+            my_mission.removeAllCommandHandlers()
+            my_mission.allowAllChatCommands()
+            my_mission.allowAllDiscreteMovementCommands()
+            my_mission.requestVideo(320, 240)
+            my_mission.setViewpoint(1)
+    
+            my_clients = MalmoPython.ClientPool()
+            my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10000))  # add Minecraft machines here as available
+            
             print("\nMap %d - Mission %d of %d:" % (imap, i + 1, num_repeats))
 
             my_mission_record = malmoutils.get_default_recording_object(agent_host,
