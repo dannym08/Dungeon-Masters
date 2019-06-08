@@ -41,7 +41,7 @@ import time
 import malmoutils
 
 
-from collections import namedtuple, deque
+from collections import namedtuple, deque, defaultdict
 import numpy as np
 import torch
 import torch.nn as nn
@@ -50,9 +50,6 @@ import torch.optim as optim
 
 from math import floor
 from copy import deepcopy
-
-enemies = 2
-
 
 if sys.version_info[0] == 2:
     # Workaround for https://github.com/PythonCharmers/python-future/issues/262
@@ -74,19 +71,23 @@ class DQN(nn.Module):
         # plus a boolean for each block to denote if they have been visited
         # plus the previous six moves it has made so that it "perceive" movement
         # plus the 2 corrdinates of the agent's location
-        self.D_in = 9 * 5 + 9 + 6 + 2
         # same reasoning as above but without the visited information
-#        self.D_in = 9 * 5 + 6 + 2
-        # H = hidden dimension, use a number between input and output dimension
-        self.H = 50
-        # D_out = output dimension = 4: 4 directions of move
+        #self.D_in = 9 * 8 + 2 + 2
 
+        #D_in = input dimension = (vision(9) * length of block_list(8)) * (1 current state + 2 past states))
+        self.D_in = (9 * 8) * (1+2)
+
+        # D_out = output dimension = 4: 4 directions of move
         self.D_out = 4
-        
+
+        # H = hidden dimension, use a number between input and output dimension
+        self.H = int((self.D_in + self.D_out) / 2)
+
+
         self.input_layer = nn.Linear(self.D_in, self.H)
         self.hidden_layer = nn.Linear(self.H, self.H)
         self.output_layer = nn.Linear(self.H, self.D_out)
-        
+
     def forward(self, x):
 #        print(x)
         h_relu = F.relu(self.input_layer(x))
@@ -97,9 +98,10 @@ class DQN(nn.Module):
 #        print(y_pred)
         return y_pred
 
+
 class ReplayBuffer:
     """Fixed-size buffer to store experience tuples."""
-    
+
     def __init__(self, buffer_size, batch_size):
         """Initialize a ReplayBuffer object.
         Params
@@ -108,15 +110,15 @@ class ReplayBuffer:
             batch_size (int): size of each training batch
             seed (int): random seed
         """
-        self.memory = deque(maxlen=buffer_size)  
+        self.memory = deque(maxlen=buffer_size)
         self.batch_size = batch_size
         self.experience = namedtuple("Experience", field_names=["state", "action", "reward", "next_state"])
-    
+
     def add(self, state, action, reward, next_state):
         """Add a new experience to memory."""
         exp = self.experience(state.detach().numpy(), action, reward, next_state.detach().numpy())
         self.memory.append(exp)
-    
+
     def sample(self):
         """Randomly sample a batch of experiences from memory."""
         experiences = random.sample(self.memory, k=self.batch_size)
@@ -127,52 +129,65 @@ class ReplayBuffer:
 #        print(experiences)
 #        print()
 #        print("sampling")
-        
+
 #        print(np.vstack([exp.state for exp in experiences if exp is not None]))
         states = torch.from_numpy(np.vstack([exp.state for exp in experiences if exp is not None])).float()#.to(deepQAgent.device)
-        
+
 #        print(np.vstack([exp.action for exp in experiences if exp is not None]))
         actions = torch.from_numpy(np.vstack([exp.action for exp in experiences if exp is not None])).long()#.to(deepQAgent.device)
-        
+
 #        print(np.vstack([exp.reward for exp in experiences if exp is not None]))
         rewards = torch.from_numpy(np.vstack([exp.reward for exp in experiences if exp is not None])).float()#.to(deepQAgent.device)
-        
+
 #        print(np.vstack([exp.next_state for exp in experiences if exp is not None]))
         next_states = torch.from_numpy(np.vstack([exp.next_state for exp in experiences if exp is not None])).float()#.to(deepQAgent.device)
 
-        
+
         return (states, actions, rewards, next_states)
 
     def __len__(self):
         """Return the current size of internal memory."""
         return len(self.memory)
-    
+
 
 class deepQAgent(object):
     """Deep Q-learning agent for discrete state/action spaces."""
-    def __init__(self, actions=[], learning_rate=0.1, tau=0.1, epsilon=1.0, gamma=0.99, debug=False, canvas=None, root=None):
-        
+    def __init__(self, actions=[], learning_rate=0.1, tau=0.1, epsilon=1.0, gamma=0.99, debug=False, canvas=None, root=None, target_file=None, policy_file=None):
+
         self.block_list = ['sandstone', 'gold_block', 'red_sandstone', 'lapis_block',
                            'cobblestone', 'grass', 'lava', 'flowing_lava']               # all types of blocks agent can see
         self.buffer_size = int(1e5)             # replay buffer size
-        self.batch_size = 64                    # minibatch size
+        self.batch_size = 100                     # minibatch size
         self.learning_rate = learning_rate      # learning rate
         self.tau = tau                          # for soft update of target parameters
         self.epsilon= epsilon                   # inital epsilon-greedy
         self.epsilon_decay = 0.00009              # how quickly to decay epsilon
         self.gamma = gamma                      # discount factor
-        self.update_every = 8                   # how often we updated the nn
+        self.update_every = 10                   # how often we updated the nn
         self.action_size = len(actions)
-        self.movement_memory = 6
-        
+        self.movement_memory = 2
+
         # running PyTorch on cpu
         self.device = torch.device('cpu')
-        
+
         # create network
         self.policy_model = DQN()#.to(self.device)
-        self.target_model = DQN()#.to(self.device)
+        self.target_model = deepcopy(self.policy_model)#DQN()#.to(self.device)
         self.optimizer = optim.Adam(self.policy_model.parameters(), lr=self.learning_rate)
-        
+
+        # if specified, read from target_file and policy_file
+        if target_file is not None:
+            self.target_model.load_state_dict(torch.load(target_file))
+            self.target_model.eval()
+            print("loaded target model from file!")
+            input("Press Enter to acknowledge...")
+
+        if policy_file is not None:
+            self.policy_model.load_state_dict(torch.load(target_file))
+            self.policy_model.eval()
+            print("loaded policy model from file!")
+            input("Press Enter to acknowledge...")
+
         # create memory
         self.memory = ReplayBuffer(self.buffer_size, self.batch_size)
         # Initialize time step (for updating every UPDATE_EVERY steps)
@@ -187,12 +202,16 @@ class deepQAgent(object):
         self.logger.addHandler(logging.StreamHandler(sys.stdout))
 
         self.actions = actions
-        
+
         self.canvas = canvas
         self.root = root
 
         self.rep = 0
-    
+
+        self.action_values_old = list()
+
+        self.moves_temp = deque(maxlen=self.movement_memory*9)
+
     def step(self, state, action, reward, next_state):
 #        print()
 #        print(state)
@@ -200,7 +219,7 @@ class deepQAgent(object):
 #        print()
         # Save experience in replay memory
         self.memory.add(state, action, reward, next_state)
-        
+
         # Learn every UPDATE_EVERY time steps.
         self.t_step = (self.t_step + 1) % self.update_every
         if self.t_step == 0:
@@ -208,7 +227,7 @@ class deepQAgent(object):
             if len(self.memory) > self.batch_size:
                 experiences = self.memory.sample()
                 self.learn(experiences, self.gamma)
-    
+
     def learn(self, experiences, gamma):
         """Update value parameters using given batch of experience tuples.
         Params
@@ -257,7 +276,7 @@ class deepQAgent(object):
 #        print("targets")
 #        print(targets)
 #        print(targets.size())
-#        
+#
         # Get expected Q values from policy model
 #        print("actions")
 #        print(actions)
@@ -270,7 +289,7 @@ class deepQAgent(object):
 #        expected_q = self.policy_model(states).gather(1, actions)
 #        print(policy.size())
 #        print(policy)
-#        
+#
 #        print(policy)
 #        print(policy.size())
 #        print(targets)
@@ -285,8 +304,8 @@ class deepQAgent(object):
         self.optimizer.step()
 
         # ------------------- update target network ------------------- #
-        self.soft_update(self.policy_model, self.target_model, self.tau)   
-    
+        self.soft_update(self.policy_model, self.target_model, self.tau)
+
     def soft_update(self, policy_model, target_model, tau):
         """Soft update model parameters.
         θ_target = τ*θ_policy + (1 - τ)*θ_target
@@ -297,41 +316,47 @@ class deepQAgent(object):
 #        print()
         for target_param, policy_param in zip(target_model.parameters(), policy_model.parameters()):
             target_param.data.copy_(tau*policy_param.data + (1.0-tau)*target_param.data)
-            
-    def act(self, world_state, agent_host):
+
+    def act(self, world_state, agent_host, old_obs=None):
         """Returns actions for given state as per current policy."""
-#        visits = list()
-        obs_text = world_state.observations[-1].text
-        obs = json.loads(obs_text)  # most recent observation
+        visits = list()
+        if old_obs is None:
+            obs_text = world_state.observations[-1].text
+            obs = json.loads(obs_text)  # most recent observation
+        else:
+            obs = old_obs
         #print(obs)
+
         self.logger.debug(obs)
         if not u'XPos' in obs or not u'ZPos' in obs:
             self.logger.error("Incomplete observation received: %s" % obs_text)
             return 0
         current_s = "%d,%d" % (int(obs[u'XPos']), int(obs[u'ZPos']))
         self.logger.debug("State: %s (x = %.2f, z = %.2f)" % (current_s, float(obs[u'XPos']), float(obs[u'ZPos'])))
-        
+
 #        print()
 #        print("before command")
-        print(obs)
-        
+#        print(obs)
+
         xpos = obs[u'XPos']
         zpos = obs[u'ZPos']
-        
+
         curr_x = xpos
         curr_z = zpos
-        
+
 
         try:
             vision = obs['vision']
         except KeyError:
-            vision = [0,0,0,0,0,0,0,0,0] # 9 zeros
-        encode = list()
-        for block in vision:
-            encode.append(self.block_list.index(block))
+            vision = ["sandstone","sandstone","sandstone","sandstone","sandstone","sandstone","sandstone","sandstone","sandstone",] # 9 zeros
+        #encode = list()
+        #for block in vision:
+            #encode.append(self.block_list.index(block))
+        encode = encode_observations(vision)
 
 #        input_state = self.one_hot(torch.tensor(encode), len(encode)).flatten()       .float()
 #        print(input_state)
+
 #        visits = list()
 ##        print(self.visited)
 #        for surrounding in [(-1,-1), (-1, 0), (-1, 1), (0, -1), (0, 0), (0, 1), (1, -1), (1, 0), (1,1)]:
@@ -339,8 +364,10 @@ class deepQAgent(object):
 #                visits.append(0)
 #            else: 
 #                visits.append(1)
-        
+
         emb = self.one_hot(torch.tensor(encode), len(self.block_list))
+
+        #self.emb_temp = deepcopy(emb)
 #        print(emb)
 #        input_state = emb.flatten()
 #        print(input_state)
@@ -355,31 +382,34 @@ class deepQAgent(object):
 #                                                       torch.as_tensor(visits).float())),
 #                                            torch.as_tensor(self.moves).float())),
 #                                 torch.tensor([int(curr_x), int(curr_z)]).float()))
-        input_state = torch.cat((torch.cat((emb.flatten(), torch.as_tensor(self.moves).float())),
-                                 torch.tensor([int(curr_x), int(curr_z)]).float()))
-#        print(input_state)
+        input_state = torch.cat((emb.flatten(), self.moves))
+
+
+        print("Input State: " + str(input_state))
+        print(len(input_state))
+        #input("Enter...")
 #        print(emb_np)
 #        print()
-#        
-#            
+#
+#
 #        state = np.array([int(xpos),
 #                          int(zpos),
 #                          int(visit_code)])
-#        
+#
 #        state.append(emb_np)
-    
+
         # update Q values        
 #        state = torch.from_numpy(state).float().unsqueeze(0)#.to(self.device)
 #        print(state)
 #        print()
-        
+
 #        print(self.visited)
 #        for surrounding in [(-1,-1), (-1, 0), (-1, 1), (0, -1), (0, 0), (0, 1), (1, -1), (1, 0), (1,1)]:
 #            if (int(xpos) + surrounding[0], int(zpos) + surrounding[1]) not in self.visited:
 #                visits.append(0.)
-#            else: 
+#            else:
 #                visits.append(1.)
-                
+
 #        print(visits)
 #        visit_tensor = torch.as_tensor(visits).unsqueeze(0)
 #        print(visit_tensor)
@@ -388,7 +418,7 @@ class deepQAgent(object):
 #        print(torch.cat((input_state, visit_tensor)).t())
 #        print(torch.cat((input_state, visit_tensor)).t().unsqueeze(0))
 #        input_state = torch.cat((input_state, visit_tensor)).t().unsqueeze(0)
-        
+
 #        state_actions = torch.as_tensor(self.recent_actions, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
 #        print(state_actions.size())
 #        print(input_state.size())
@@ -396,13 +426,17 @@ class deepQAgent(object):
 #        print(torch.cat((input_state, state_actions), dim=1).t())
 #        input_state = torch.cat((input_state, state_actions), dim=1)
 #        print(input_state)
-        
+
 
         self.policy_model.eval()
         with torch.no_grad():
             action_values = self.policy_model(input_state)
+            self.action_values_old = deepcopy(action_values)
         self.policy_model.train()
-        
+
+
+        self.drawQ( curr_x = int(obs[u'XPos']), curr_y = int(obs[u'ZPos']) , action_values = action_values)
+
 #        print(state)
 #        print(action_values)
 
@@ -421,15 +455,15 @@ class deepQAgent(object):
               str(vision[0:3])+"\n"+
               str(vision[3:6])+"\n"+
               str(vision[6:9])+"\n")
+        print("Action values: "+str(action_values))
         while True:
             if ((random.random() > self.epsilon) or (test_knowledge and _i < 5)):
                 # t.max(1) will return largest column value of each row.
                 # second column on max result is index of where max element was
                 # found, so we pick action with the larger expected reward.
                 print("Optimal action: ", end="")
-                print(action_values)
                 action = action_values.max(0)[0].max(0)[0].view(1, 1)
-                print(action)
+                print(str(action)+", ", end="")
                 action_list = list(action_values)
                 action = torch.tensor([[action_list.index(action)]])
 #                action = np.average(action_values.cpu().data.numpy(),axis=1)
@@ -439,16 +473,21 @@ class deepQAgent(object):
                 action = torch.tensor([[random.randrange(self.action_size)]])
 #                action = random.choice(np.arange(self.action_size))
             print(action,self.actions[action])
-            if( (action == 0 and vision[1] != 'gold_block') or (action == 1 and vision[7] != 'gold_block') or
-                (action == 2 and vision[3] != 'gold_block') or (action == 3 and vision[5] != 'gold_block') ):
-                break
-            else:
-                print("abort (wall)")
+            #if( (action == 0 and vision[1] != 'gold_block') or (action == 1 and vision[7] != 'gold_block') or
+            #    (action == 2 and vision[3] != 'gold_block') or (action == 3 and vision[5] != 'gold_block') ):
+            #    break
+            #else:
+            #    print("abort (wall)")
             _i += 1
-        
+            break
+
 #        self.moves.append(action)
-        self.moves.append(int(curr_x))
-        self.moves.append(int(curr_z))
+        #self.moves.append(int(curr_x))
+        #self.moves.append(int(curr_z))
+        self.moves_temp.extend(encode)
+        self.moves = self.one_hot(torch.tensor(self.moves_temp), len(self.block_list)).flatten()
+
+
 #        self.recent_actions.append(action)
 #        print(self.recent_actions)
 #        print(input_state)
@@ -464,8 +503,11 @@ class deepQAgent(object):
         self.prev_s = current_s
         self.prev_a = action
 
-        obs_text = world_state.observations[-1].text
-        obs = json.loads(obs_text)  # most recent observation
+        if old_obs is None:
+            obs_text = world_state.observations[-1].text
+            obs = json.loads(obs_text)  # most recent observation
+        else:
+            obs = old_obs
 #        print()
 #        print("after command")
 #        print(obs)
@@ -475,13 +517,13 @@ class deepQAgent(object):
             return 0
         current_s = "%d,%d" % (int(obs[u'XPos']), int(obs[u'ZPos']))
         self.logger.debug("State: %s (x = %.2f, z = %.2f)" % (current_s, float(obs[u'XPos']), float(obs[u'ZPos'])))
-            
+
 #        print(next_state)
 #        print()
 #        print()
-            
+
         return input_state, action
-    
+
     def run(self, agent_host, test_knowledge):
         """Run agent on current world"""
 
@@ -497,13 +539,17 @@ class deepQAgent(object):
         
 #        self.visited = set() # always have starting position set to visited
 #        self.visited.add((4, 1))
-        self.moves = deque(maxlen=self.movement_memory)
-        for i in range(self.movement_memory):
+        #self.moves = deque(maxlen=self.movement_memory)
+        #self.moves_temp = list()
+        for i in range(self.movement_memory*9): #9 for vision radius
 #            self.moves.append(-1)
-            self.moves.append(4)
-            self.moves.append(1)
-        
-
+            #self.moves.append(4)
+            #self.moves.append(1)
+            self.moves_temp.append(0)
+        print(self.moves_temp)
+        self.moves = self.one_hot(torch.tensor(self.moves_temp), len(self.block_list)).flatten()
+        print("self.moves = " + str(self.moves))
+        print(len(self.moves))
         # wait for a valid observation
         world_state = agent_host.peekWorldState()
         while world_state.is_mission_running and all(e.text == '{}' for e in world_state.observations):
@@ -519,7 +565,7 @@ class deepQAgent(object):
         if not world_state.is_mission_running:
             return 0  # mission already ended
 
-        assert len(world_state.video_frames) > 0, 'No video frames!?' 
+        assert len(world_state.video_frames) > 0, 'No video frames!?'
 
         obs = json.loads(world_state.observations[-1].text)
         prev_x = obs[u'XPos']
@@ -537,20 +583,20 @@ class deepQAgent(object):
         # take first action
 #        print(pre_state)
 #        print(state)
-        
+
 #        obs = json.loads(world_state.observations[-1].text)
 #        print("after first action")
 #        print("curr_location: ", obs[u'XPos'], obs[u'ZPos'])
-        
+
 
         require_move = True
         check_expected_position = True
-        
+
         count = 0
 
         # main loop:
         while world_state.is_mission_running:
-            
+
             state, action = self.act(world_state, agent_host)
             #input("Press Enter to continue...")
             # wait for the position to have changed and a reward received
@@ -603,7 +649,7 @@ class deepQAgent(object):
                 curr_z = obs[u'ZPos']
                 print('New position from observation:', curr_x, ',', curr_z, 'after action:', self.actions[self.prev_a],
                       end=' ')  # NSWE
-                
+
                 if check_expected_position:
                     expected_x = prev_x + [0, 0, -1, 1][self.prev_a]
                     expected_z = prev_z + [-1, 1, 0, 0][self.prev_a]
@@ -624,13 +670,15 @@ class deepQAgent(object):
                 else:
                     print()
                 #input("Press Enter to continue...")
-                
+
                 vision = obs['vision']
-                encode = list()
-                for block in vision:
-                    encode.append(self.block_list.index(block))
+                encode = encode_observations(vision)
+                #encode = list()
+                #for block in vision:
+                #    encode.append(self.block_list.index(block))
 #                input_state = self.one_hot(torch.tensor(encode), len(encode)).flatten()       .float()
 #                print(input_state)
+
 #                visits = list()
 ##                print(self.visited)
 ##                print(self.visited)
@@ -645,7 +693,7 @@ class deepQAgent(object):
 #                        visits.append(0)
 #                    else: 
 #                        visits.append(1)
-                
+
                 emb = self.one_hot(torch.tensor(encode), len(self.block_list))
 #                print(emb)
 #                next_state = emb.flatten()
@@ -655,8 +703,7 @@ class deepQAgent(object):
 #                                                              torch.as_tensor(visits).float())),
 #                                                   torch.as_tensor(self.moves).float())),
 #                                        torch.tensor([int(curr_x), int(curr_z)]).float()))
-                next_state = torch.cat((torch.cat((emb.flatten(), torch.as_tensor(self.moves).float())),
-                                         torch.tensor([int(curr_x), int(curr_z)]).float()))
+                next_state = torch.cat((emb.flatten(), self.moves))
 #                print(next_state)
 #                state_info = list()
 #                state_info.append(vision)
@@ -667,8 +714,8 @@ class deepQAgent(object):
 #                print(encode)
 #                print(self.one_hot(torch.tensor(encode), len(self.block_list)).float())
 #                next_state = self.one_hot(torch.tensor(encode), len(self.block_list)).t().float()
-                
-                
+
+
 #                visits = list()
 ##                print(self.visited)
 #                if (int(curr_x), int(curr_z)) not in self.visited:
@@ -680,13 +727,13 @@ class deepQAgent(object):
 #                for surrounding in [(-1,-1), (-1, 0), (-1, 1), (0, -1), (0, 0), (0, 1), (1, -1), (1, 0), (1,1)]:
 #                    if (int(curr_x) + surrounding[0], int(curr_z) + surrounding[1]) not in self.visited:
 #                        visits.append(0)
-#                    else: 
+#                    else:
 #                        visits.append(1)
-#                
+#
 #                state_info.append(visits)
-#                
+#
 #                print(state_info)
-                
+
 #                visit_tensor = torch.as_tensor(visits).unsqueeze(0)
 #                next_state = torch.cat((next_state, visit_tensor)).t().unsqueeze(0)
 #                print(state)
@@ -695,10 +742,10 @@ class deepQAgent(object):
 #                current_r += discovery_reward
 #                print(current_r)
 #                print(next_state)
-#                
+#
 #                if count == 10:
 #                    print(prev)
-                
+
                 prev_x = curr_x
                 prev_z = curr_z
 
@@ -706,7 +753,8 @@ class deepQAgent(object):
                 # place move into memory and update NN if necessary
                 total_reward += current_r
 
-                agent.step(state, action, total_reward, next_state)
+                #agent.step(state, action, total_reward, next_state)
+                agent.step(state, action, current_r, next_state)
 
                 ### SPECIAL ###
                 # Here, we can replace our current spot with a normal block
@@ -736,7 +784,7 @@ class deepQAgent(object):
 #                time.sleep(0.5)
 
                 current_r = 0
-                
+
                 count += 1
 
 
@@ -744,41 +792,114 @@ class deepQAgent(object):
         # process final reward
         self.logger.debug("Final reward: %d" % current_r)
         total_reward += current_r
-        
-        state = np.array([int(obs[u'XPos']),
-                          int(obs[u'ZPos'])])
+
+        #state = np.array([int(obs[u'XPos']),
+        #                  int(obs[u'ZPos'])])
+
         # update Q values
-        state = torch.from_numpy(state).float().unsqueeze(0)#.to(self.device)
-        self.policy_model.eval()
+        #state = torch.from_numpy(state).float().unsqueeze(0)#.to(self.device)
+        #self.policy_model.eval()
+        #self.policy_model.train()
+
+        world_state = agent_host.getWorldState()
+
+        x = obs[u'XPos']
+        z = obs[u'ZPos']
+
+        action = int(action)
+        if action == 0:
+            z -= 1
+        elif action == 1:
+            z += 1
+        elif action == 2:
+            x -= 1
+        elif action == 3:
+            x += 1
+
+        obs[u'XPos'] = x
+        obs[u'ZPos'] = z
+        state, action = self.act(world_state, agent_host, old_obs=obs)
 
         # update epsilon for next run but don't let epsilon get below 0.01
         if self.epsilon > 0.01 or True: #override for test
             self.epsilon -= self.epsilon_decay
         if self.epsilon < 0:
             self.epsilon = 0
+
+        # stochastic means we must lower alpha to 0 over time
+        #if self.learning_rate > 0:
+        #    self.learning_rate -= 0.00003
+        #if self.learning_rate < 0:
+        #    self.learning_rate = 0
+
+        #suggestion: raise gamma over time
+        #if self.gamma < 0.99:
+        #    self.gamma += 0.00003
+        
         print()
         print('updated epsilon: ', self.epsilon)
+        print('updated alpha:   ', self.learning_rate)
+        print('updated gamma:   ', self.gamma)
         print()
 
+        self.drawQ(curr_x = int(obs[u'XPos']), curr_y = int(obs[u'ZPos']), action_values=self.action_values_old)
+
         return total_reward
-    
+
     def one_hot(self, batch, depth):
         emb = nn.Embedding(depth, depth)
         emb.weight.data = torch.eye(depth)
         return emb(batch)
-    
+
     def emb(self, state_info):
         emb = nn.Embedding(len(state_info[0]), 1)
         return emb(state_info)
 
-def add_enemies(arena_width,arena_height):
+    def drawQ( self, curr_x=None, curr_y=None ,action_values = None):
+        if self.canvas is None or self.root is None:
+            return
+        self.canvas.delete("all")
+        action_inset = 0.1
+        action_radius = 0.1
+        curr_radius = 0.2
+        action_positions = [ ( 0.5, 1-action_inset ), ( 0.5, action_inset ), ( 1-action_inset, 0.5 ), ( action_inset, 0.5 ) ]
+        # (NSWE to match action order)
+        for x in range(world_x):
+            for y in range(world_y):
+                s = "%d:%d" % (x,y)
+                self.canvas.create_rectangle( (world_x-1-x)*scale, (world_y-1-y)*scale, (world_x-1-x+1)*scale, (world_y-1-y+1)*scale, outline="#fff", fill="#000")
+
+        if action_values is not None and curr_x is not None and curr_y is not None:
+            x = curr_x
+            y = curr_y
+            min_value = min(action_values)
+            max_value = max(action_values)
+            for action in range(4):
+                value = action_values[action]
+                color = int( 255 * ( value - min_value ) / ( max_value - min_value )) # map value to 0-255
+                color = max( min( color, 255 ), 0 ) # ensure within [0,255]
+                color_string = '#%02x%02x%02x' % (255-color, color, 0)
+                self.canvas.create_oval( (world_x - 1 - x + action_positions[action][0] - action_radius ) *scale,
+                                         (world_y - 1 - y + action_positions[action][1] - action_radius ) *scale,
+                                         (world_x - 1 - x + action_positions[action][0] + action_radius ) *scale,
+                                         (world_y - 1 - y + action_positions[action][1] + action_radius ) *scale,
+                                         outline=color_string, fill=color_string )
+        if curr_x is not None and curr_y is not None:
+            self.canvas.create_oval( (world_x - 1 - curr_x + 0.5 - curr_radius ) * scale,
+                                     (world_y - 1 - curr_y + 0.5 - curr_radius ) * scale,
+                                     (world_x - 1 - curr_x + 0.5 + curr_radius ) * scale,
+                                     (world_y - 1 - curr_y + 0.5 + curr_radius ) * scale,
+                                     outline="#fff", fill="#fff" )
+        self.root.update()
+
+def add_enemies(arena_width,arena_height, used_pos):
     xml = ""
-    # add more enemies, but avoid end goal
-    used_pos = set((arena_width, arena_height-3))
-    
+    # vision around enemies
+    enemy_vision = set()
+
     smaller_dim = min(arena_width, arena_height)
     enemies = (smaller_dim-1)//3
-    
+
     for i in range(enemies):
         while True:
             x = random.randint(2, arena_width)
@@ -788,38 +909,49 @@ def add_enemies(arena_width,arena_height):
                 z = random.randint(0, arena_height-4)
             if (x,z) not in used_pos:
                 break
-        
+
         used_pos.add((x,z))
+        enemy_vision.add((x+1,z+1))
+        enemy_vision.add((x,z+1))
+        enemy_vision.add((x+1,z))
+        enemy_vision.add((x-1,z-1))
+        enemy_vision.add((x,z-1))
+        enemy_vision.add((x-1,z))
+        
         xml += '''<DrawCuboid x1="''' + str(x) + '''" y1="45" z1="''' + str(z) + '''" x2="''' + str(x-2) + '''" y2="45" z2="''' + str(z+2) + '''" type="red_sandstone"/>'''
         xml += '''<DrawEntity x="''' + str(x-0.5) + '''" y="45" z="''' + str(z+1.5) + '''"  type="Villager" />'''
+    
+    used_pos = used_pos.union(enemy_vision)
     return xml
 
 
-def add_items(arena_width, arena_height, items_count=1):
+def add_items(arena_width, arena_height, used_pos, items_count=1):
     xml = ""
+    
     for i in range(items_count):
 
-        if True:
+        while True:
             x = random.randint(0, arena_width)
             z = random.randint(0, arena_height - 1)
+            if (x,z) not in used_pos:
+                break
 
         xml += '''<DrawItem x="''' + str(x) + '''" y="46" z="''' + str(z) + '''" type="diamond" />''' + \
             '''<DrawBlock x="''' + str(x) + '''" y="45" z="''' + str(z) + '''" type="grass" />'''
     return xml
 
 def encode_observations(vision:list=list()):
-    """CURRENTLY NOT USED!!! block_list used instead for encoding."""
-    encode_dict = {
-        "sandstone": 0,
-        "flowing_lava": 1,
-        "lapis_block": 2,
-        "red_sandstone": 3,
-        "stone": 4,
-        "gold_block": 5,
-        "grass": 6,
-        "cobblestone": 7,
-        "lava": 1,
-    }
+    encode_dict = defaultdict(lambda: 0,
+        sandstone = 0,
+        flowing_lava = 1,
+        lapis_block = 2,
+        red_sandstone = 3,
+        stone = 4,
+        gold_block = 5,
+        grass = 6,
+        cobblestone = 7,
+        lava = 1,
+                              )
 
     result = []
     for item in vision:
@@ -831,7 +963,11 @@ def encode_observations(vision:list=list()):
 def XML_generator(x,y):
     arena_width=x-1
     arena_height=y
-    print(x,y)
+    used_pos = set((arena_width, arena_height-3))
+    
+    # make sure nothing spawns on top of starting position
+    used_pos.add((4,1))
+    
     xml = '''<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
                 <Mission xmlns="http://ProjectMalmo.microsoft.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
                 
@@ -864,20 +1000,20 @@ def XML_generator(x,y):
                           <DrawBlock  x="4"   y="45"  z="1"  type="cobblestone" />                           <!-- the starting marker -->
                     		  
                           <!-- Boundary -->
-                          <DrawCuboid x1="'''+str(arena_width+1)+'''"  y1="45" z1="-1"  x2="'''+str(arena_width+1)+'''" y2="45" z2="'''+str(arena_height)+'''" type="gold_block" />           <!-- Left wall from start position -->
-                          <DrawCuboid x1="-1"  y1="45" z1="-1"  x2="'''+str(arena_width+1)+'''" y2="45" z2="-1" type="gold_block" />			  <!-- Bottom wall from start position -->
-                          <DrawCuboid x1="-1"  y1="45" z1="-1"  x2="-1" y2="45" z2="'''+str(arena_height)+'''" type="gold_block" />           <!-- Right wall from start position -->
-                          <DrawCuboid x1="-1"  y1="45" z1="'''+str(arena_height)+'''"  x2="'''+str(arena_width+1)+'''" y2="45" z2="'''+str(arena_height)+'''" type="gold_block" />           <!-- Top wall from start position -->
+                          <DrawCuboid x1="'''+str(arena_width+1)+'''"  y1="45" z1="-1"  x2="'''+str(arena_width+1)+'''" y2="45" z2="'''+str(arena_height)+'''" type="red_sandstone" />           <!-- Left wall from start position -->
+                          <DrawCuboid x1="-1"  y1="45" z1="-1"  x2="'''+str(arena_width+1)+'''" y2="45" z2="-1" type="red_sandstone" />			  <!-- Bottom wall from start position -->
+                          <DrawCuboid x1="-1"  y1="45" z1="-1"  x2="-1" y2="45" z2="'''+str(arena_height)+'''" type="red_sandstone" />           <!-- Right wall from start position -->
+                          <DrawCuboid x1="-1"  y1="45" z1="'''+str(arena_height)+'''"  x2="'''+str(arena_width+1)+'''" y2="45" z2="'''+str(arena_height)+'''" type="red_sandstone" />           <!-- Top wall from start position -->
                 
                           <DrawBlock  x="''' + str(arena_width) + '''"   y="45"  z="''' + str(arena_height-1) + '''" type="lapis_block" />                           <!-- the destination marker -->
                           <DrawItem   x="''' + str(arena_width) + '''"   y="46"  z="''' + str(arena_height-1) + '''" type="diamond" />                               <!-- another destination marker -->
                           <DrawItem   x="6"   y="46"  z="0" type="diamond" />  
                 		  
                           <!-- Enemies -->
-                          '''+ add_enemies(arena_width, arena_height) + '''
+                          '''+ add_enemies(arena_width, arena_height, used_pos) + '''
                           
                           <!-- Items -->
-                          '''+ add_items(arena_width, arena_height, agent_host.getIntArgument('i')) + '''
+                          '''+ add_items(arena_width, arena_height, used_pos, agent_host.getIntArgument('i')) + '''
                 		  
                       </DrawingDecorator>
                       <ServerQuitFromTimeUp timeLimitMs="10000"/>
@@ -914,9 +1050,9 @@ def XML_generator(x,y):
                       <RewardForTouchingBlockType>
                         <Block reward="-10000.0" type="lava" behaviour="onceOnly"/>
                         <Block reward="1000.0" type="lapis_block" behaviour="onceOnly"/>
-                        <Block reward="-100.0" type="red_sandstone" behaviour="onceOnly"/>
+                        <Block reward="-1000.0" type="red_sandstone" behaviour="onceOnly"/>
                         <Block reward="0.0" type="gold_block"/>
-                        <Block reward="100" type="grass" />
+                        <Block reward="200" type="grass" />
                       </RewardForTouchingBlockType>
                       <RewardForSendingCommand reward="-1"/>
                       <AgentQuitFromTouchingBlockType>
@@ -942,7 +1078,7 @@ try:
 except KeyError:
     print("MALMO_XSD_PATH not set? Check environment.")
     exit(1)
-    
+
 mission_file = os.path.abspath(os.path.join(schema_dir, '..',
                                             'sample_missions', 'cliff_walking_1.xml'))  # Integration test path
 
@@ -967,10 +1103,11 @@ agent_host.addOptionalFloatArgument('gamma', 'Discount factor.', 0.99)
 agent_host.addOptionalFlag('load_model', 'Load initial model from model_file.')
 agent_host.addOptionalStringArgument('model_file', 'Path to the initial model file', '')
 agent_host.addOptionalFlag('debug', 'Turn on debugging.')
-agent_host.addOptionalIntArgument('x','The width of the arena.',18)
-agent_host.addOptionalIntArgument('y','The width of the arena.',16)
+agent_host.addOptionalIntArgument('x','The width of the arena.',10)
+agent_host.addOptionalIntArgument('y','The width of the arena.',10)
 agent_host.addOptionalIntArgument('i','The total number of small items in the arena (except the goal)', 5)
-
+agent_host.addOptionalStringArgument('policy_file', 'Load policy model from path','')
+agent_host.addOptionalStringArgument('target_file', 'Load target model from path','')
 malmoutils.parse_command_line(agent_host)
 
 # -- set up the python-side drawing -- #
@@ -988,90 +1125,102 @@ if agent_host.receivedArgument("test"):
 else:
     num_maps = 30000
 
-for imap in range(num_maps):
+try:
+    for imap in range(num_maps):
 
-    # -- set up the agent -- #
-    actionSet = ["movenorth 1", "movesouth 1", "movewest 1", "moveeast 1"]
+        # -- set up the agent -- #
+        actionSet = ["movenorth 1", "movesouth 1", "movewest 1", "moveeast 1"]
 
-#    agent = TabQAgent(
-#        actions=actionSet,
-#        epsilon=agent_host.getFloatArgument('epsilon'),
-#        alpha=agent_host.getFloatArgument('alpha'),
-#        gamma=agent_host.getFloatArgument('gamma'),
-#        debug=agent_host.receivedArgument("debug"),
-#        canvas=canvas,
-#        root=root)
-    
-    agent = deepQAgent( actions=actionSet,
-                        learning_rate=agent_host.getFloatArgument('alpha'),
-                        tau=agent_host.getFloatArgument('tau'),
-                        epsilon=agent_host.getFloatArgument('epsilon'),
-                        gamma=agent_host.getFloatArgument('gamma'),
-                        debug=agent_host.receivedArgument("debug"),
-                        canvas=canvas,
-                        root=root)
-    
+    #    agent = TabQAgent(
+    #        actions=actionSet,
+    #        epsilon=agent_host.getFloatArgument('epsilon'),
+    #        alpha=agent_host.getFloatArgument('alpha'),
+    #        gamma=agent_host.getFloatArgument('gamma'),
+    #        debug=agent_host.receivedArgument("debug"),
+    #        canvas=canvas,
+    #        root=root)
+
+        agent = deepQAgent( actions=actionSet,
+                            learning_rate=agent_host.getFloatArgument('alpha'),
+                            tau=agent_host.getFloatArgument('tau'),
+                            epsilon=agent_host.getFloatArgument('epsilon'),
+                            gamma=agent_host.getFloatArgument('gamma'),
+                            debug=agent_host.receivedArgument("debug"),
+                            canvas=canvas,
+                            root=root,
+                            target_file=agent_host.getStringArgument("target_file") if len(agent_host.getStringArgument("target_file")) > 0 else None,
+                            policy_file=agent_host.getStringArgument("policy_file") if len(agent_host.getStringArgument("policy_file")) > 0 else None)
 
 
-    # -- set up the mission -- #
-    mission_xml = XML_generator(x=world_x,y=world_y)
-    my_mission = MalmoPython.MissionSpec(mission_xml, True)
-    my_mission.removeAllCommandHandlers()
-    my_mission.allowAllChatCommands()
-    my_mission.allowAllDiscreteMovementCommands()
-    my_mission.requestVideo(640, 480)
-    my_mission.setViewpoint(1)
 
-    my_clients = MalmoPython.ClientPool()
-    my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10000))  # add Minecraft machines here as available
+        # -- set up the mission -- #
+        mission_xml = XML_generator(x=world_x,y=world_y)
+        my_mission = MalmoPython.MissionSpec(mission_xml, True)
+        my_mission.removeAllCommandHandlers()
+        my_mission.allowAllChatCommands()
+        my_mission.allowAllDiscreteMovementCommands()
+        my_mission.requestVideo(640, 480)
+        my_mission.setViewpoint(1)
 
-    max_retries = 3
-    agentID = 0
-    expID = 'deep_q_learning'
+        my_clients = MalmoPython.ClientPool()
+        my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10000))  # add Minecraft machines here as available
 
-    num_repeats = 15000
-    cumulative_rewards = []
-    for i in range(num_repeats):
+        max_retries = 3
+        agentID = 0
+        expID = 'deep_q_learning'
 
-        print("\nMap %d - Mission %d of %d:" % (imap, i + 1, num_repeats))
+        num_repeats = 15000
+        cumulative_rewards = []
+        for i in range(num_repeats):
 
-        my_mission_record = malmoutils.get_default_recording_object(agent_host,
-                                                                    "./save_%s-map%d-rep%d" % (expID, imap, i))
+            print("\nMap %d - Mission %d of %d:" % (imap, i + 1, num_repeats))
 
-        for retry in range(max_retries):
-            try:
-                agent_host.startMission(my_mission, my_clients, my_mission_record, agentID, "%s-%d" % (expID, i))
-                break
-            except RuntimeError as e:
-                if retry == max_retries - 1:
-                    print("Error starting mission:", e)
-                    exit(1)
-                else:
-                    print("here?")
-                    time.sleep(2.5)
+            my_mission_record = malmoutils.get_default_recording_object(agent_host,
+                                                                        "./save_%s-map%d-rep%d" % (expID, imap, i))
 
-        print("Waiting for the mission to start", end=' ')
-        world_state = agent_host.getWorldState()
-        while not world_state.has_mission_begun:
-            print(".", end="")
-            time.sleep(0.1)
+            for retry in range(max_retries):
+                try:
+                    agent_host.startMission(my_mission, my_clients, my_mission_record, agentID, "%s-%d" % (expID, i))
+                    break
+                except RuntimeError as e:
+                    if retry == max_retries - 1:
+                        print("Error starting mission:", e)
+                        exit(1)
+                    else:
+                        print("here?")
+                        time.sleep(2.5)
+
+            print("Waiting for the mission to start", end=' ')
             world_state = agent_host.getWorldState()
-            for error in world_state.errors:
-                print("Error:", error.text)
+            while not world_state.has_mission_begun:
+                print(".", end="")
+                time.sleep(0.1)
+                world_state = agent_host.getWorldState()
+                for error in world_state.errors:
+                    print("Error:", error.text)
+            print()
+
+
+            # -- run the agent in the world -- #
+            test_knowledge = True if i % 5 == 0 else False
+
+            cumulative_reward = agent.run(agent_host, test_knowledge)
+            print('Cumulative reward: %d' % cumulative_reward)
+            cumulative_rewards += [cumulative_reward]
+
+
+            # -- clean up -- #
+            time.sleep(2)  # (let the Mod reset)
+
+        print("Done.")
+
         print()
-
-        # -- run the agent in the world -- #
-        test_knowledge = True if i % 5 == 0 else False
-
-        cumulative_reward = agent.run(agent_host, test_knowledge)
-        print('Cumulative reward: %d' % cumulative_reward)
-        cumulative_rewards += [cumulative_reward]
-
-        # -- clean up -- #
-        time.sleep(2)  # (let the Mod reset)
-
-    print("Done.")
-
-    print()
-    print("Cumulative rewards for all %d runs:" % num_repeats)
-    print(cumulative_rewards)
+        print("Cumulative rewards for all %d runs:" % num_repeats)
+        print(cumulative_rewards)
+except KeyboardInterrupt as e:
+    print("KeyboardInterrupt detected: aborting...")
+finally:
+    print("Saving model file to same directory...")
+    torch.save(agent.policy_model.state_dict(), "./policy_model.pth")
+    torch.save(agent.target_model.state_dict(), "./target_model.pth")
+    print("Saved model.pth file!")
