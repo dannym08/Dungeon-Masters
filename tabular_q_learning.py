@@ -466,14 +466,16 @@ class deepQAgent(object):
 #                print("Random action: ", end="")
                 action = torch.tensor([[random.randrange(self.action_size)]])
 #                action = random.choice(np.arange(self.action_size))
+#            print()
 #            print(action,self.actions[action])
-            #if( (action == 0 and vision[1] != 'gold_block') or (action == 1 and vision[7] != 'gold_block') or
-            #    (action == 2 and vision[3] != 'gold_block') or (action == 3 and vision[5] != 'gold_block') ):
-            #    break
-            #else:
+#            print(vision)
+#            print()
+            if( (action == 0 and vision[1] != 'gold_block') or (action == 1 and vision[7] != 'gold_block') or
+                (action == 2 and vision[3] != 'gold_block') or (action == 3 and vision[5] != 'gold_block') ):
+                break
+            else:
             #    print("abort (wall)")
-            _i += 1
-            break
+                _i += 1
 
 #        self.moves.append(action)
         #self.moves.append(int(curr_x))
@@ -859,10 +861,6 @@ class deepQAgent(object):
         emb.weight.data = torch.eye(depth)
         return emb(batch)
 
-    def emb(self, state_info):
-        emb = nn.Embedding(len(state_info[0]), 1)
-        return emb(state_info)
-
     def drawQ( self, curr_x=None, curr_y=None ,action_values = None):
         if self.canvas is None or self.root is None:
             return
@@ -1018,10 +1016,10 @@ def XML_generator(x,y):
                           <DrawBlock  x="4"   y="45"  z="1"  type="cobblestone" />                           <!-- the starting marker -->
                     		  
                           <!-- Boundary -->
-                          <DrawCuboid x1="'''+str(arena_width+1)+'''"  y1="45" z1="-1"  x2="'''+str(arena_width+1)+'''" y2="45" z2="'''+str(arena_height)+'''" type="red_sandstone" />           <!-- Left wall from start position -->
-                          <DrawCuboid x1="-1"  y1="45" z1="-1"  x2="'''+str(arena_width+1)+'''" y2="45" z2="-1" type="red_sandstone" />			  <!-- Bottom wall from start position -->
-                          <DrawCuboid x1="-1"  y1="45" z1="-1"  x2="-1" y2="45" z2="'''+str(arena_height)+'''" type="red_sandstone" />           <!-- Right wall from start position -->
-                          <DrawCuboid x1="-1"  y1="45" z1="'''+str(arena_height)+'''"  x2="'''+str(arena_width+1)+'''" y2="45" z2="'''+str(arena_height)+'''" type="red_sandstone" />           <!-- Top wall from start position -->
+                          <DrawCuboid x1="'''+str(arena_width+1)+'''"  y1="45" z1="-1"  x2="'''+str(arena_width+1)+'''" y2="45" z2="'''+str(arena_height)+'''" type="gold_block" />           <!-- Left wall from start position -->
+                          <DrawCuboid x1="-1"  y1="45" z1="-1"  x2="'''+str(arena_width+1)+'''" y2="45" z2="-1" type="gold_block" />			  <!-- Bottom wall from start position -->
+                          <DrawCuboid x1="-1"  y1="45" z1="-1"  x2="-1" y2="45" z2="'''+str(arena_height)+'''" type="gold_block" />           <!-- Right wall from start position -->
+                          <DrawCuboid x1="-1"  y1="45" z1="'''+str(arena_height)+'''"  x2="'''+str(arena_width+1)+'''" y2="45" z2="'''+str(arena_height)+'''" type="gold_block" />           <!-- Top wall from start position -->
                 
                           <DrawBlock  x="''' + str(arena_width) + '''"   y="45"  z="''' + str(arena_height-1) + '''" type="lapis_block" />                           <!-- the destination marker -->
                           <DrawItem   x="''' + str(arena_width) + '''"   y="46"  z="''' + str(arena_height-1) + '''" type="diamond" />                               <!-- another destination marker -->
@@ -1033,7 +1031,7 @@ def XML_generator(x,y):
                           '''+ add_items(arena_width, arena_height, used_pos, agent_host.getIntArgument('i')) + '''
                 		  
                       </DrawingDecorator>
-                      <ServerQuitFromTimeUp timeLimitMs="10000"/>
+                      <ServerQuitFromTimeUp timeLimitMs="20000"/>
                       <ServerQuitWhenAnyAgentFinishes/>
                     </ServerHandlers>
                   </ServerSection>
@@ -1067,9 +1065,9 @@ def XML_generator(x,y):
                       <RewardForTouchingBlockType>
                         <Block reward="-10000.0" type="lava" behaviour="onceOnly"/>
                         <Block reward="1000.0" type="lapis_block" behaviour="onceOnly"/>
-                        <Block reward="-1000.0" type="red_sandstone" behaviour="onceOnly"/>
+                        <Block reward="-100.0" type="red_sandstone" behaviour="onceOnly"/>
                         <Block reward="0.0" type="gold_block"/>
-                        <Block reward="200" type="grass" />
+                        <Block reward="20" type="grass" />
                       </RewardForTouchingBlockType>
                       <RewardForSendingCommand reward="-1"/>
                       <AgentQuitFromTouchingBlockType>
