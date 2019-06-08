@@ -160,13 +160,13 @@ class deepQAgent(object):
         self.block_list = ['sandstone', 'gold_block', 'red_sandstone', 'lapis_block',
                            'cobblestone', 'grass', 'lava', 'flowing_lava']               # all types of blocks agent can see
         self.buffer_size = int(1e5)             # replay buffer size
-        self.batch_size = 10                     # minibatch size
+        self.batch_size = 100                     # minibatch size
         self.learning_rate = learning_rate      # learning rate
         self.tau = tau                          # for soft update of target parameters
         self.epsilon= epsilon                   # inital epsilon-greedy
         self.epsilon_decay = 0.00009              # how quickly to decay epsilon
         self.gamma = gamma                      # discount factor
-        self.update_every = 3                   # how often we updated the nn
+        self.update_every = 10                   # how often we updated the nn
         self.action_size = len(actions)
         self.movement_memory = 2
 
@@ -176,7 +176,7 @@ class deepQAgent(object):
         # create network
         self.policy_model = DQN()#.to(self.device)
         self.target_model = deepcopy(self.policy_model)#DQN()#.to(self.device)
-        self.optimizer = optim.Adadelta(self.policy_model.parameters(), lr=self.learning_rate)
+        self.optimizer = optim.Adam(self.policy_model.parameters(), lr=self.learning_rate)
 
         # if specified, read from target_file and policy_file
         if target_file is not None:
@@ -830,14 +830,14 @@ class deepQAgent(object):
             self.epsilon = 0
 
         # stochastic means we must lower alpha to 0 over time
-        if self.learning_rate > 0:
-            self.learning_rate -= 0.00003
-        if self.learning_rate < 0:
-            self.learning_rate = 0
+        #if self.learning_rate > 0:
+        #    self.learning_rate -= 0.00003
+        #if self.learning_rate < 0:
+        #    self.learning_rate = 0
 
         #suggestion: raise gamma over time
-        if self.gamma < 0.99:
-            self.gamma += 0.00003
+        #if self.gamma < 0.99:
+        #    self.gamma += 0.00003
         
         print()
         print('updated epsilon: ', self.epsilon)
