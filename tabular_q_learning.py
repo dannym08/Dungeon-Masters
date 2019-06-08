@@ -319,7 +319,6 @@ class deepQAgent(object):
 
     def act(self, world_state, agent_host, old_obs=None):
         """Returns actions for given state as per current policy."""
-        visits = list()
         if old_obs is None:
             obs_text = world_state.observations[-1].text
             obs = json.loads(obs_text)  # most recent observation
@@ -337,13 +336,6 @@ class deepQAgent(object):
 #        print()
 #        print("before command")
 #        print(obs)
-
-        xpos = obs[u'XPos']
-        zpos = obs[u'ZPos']
-
-        curr_x = xpos
-        curr_z = zpos
-
 
         try:
             vision = obs['vision']
@@ -385,8 +377,8 @@ class deepQAgent(object):
         input_state = torch.cat((emb.flatten(), self.moves))
 
 
-        print("Input State: " + str(input_state))
-        print(len(input_state))
+#        print("Input State: " + str(input_state))
+#        print(len(input_state))
         #input("Enter...")
 #        print(emb_np)
 #        print()
@@ -450,29 +442,29 @@ class deepQAgent(object):
 #        print(np.argmax(np.average(action_values.cpu().data.numpy(),axis=1)))
 
         _i = 0
-        print("Test Knowledge: "+str(test_knowledge))
-        print("Vision: "+"\n"+
-              str(vision[0:3])+"\n"+
-              str(vision[3:6])+"\n"+
-              str(vision[6:9])+"\n")
-        print("Action values: "+str(action_values))
+#        print("Test Knowledge: "+str(test_knowledge))
+#        print("Vision: "+"\n"+
+#              str(vision[0:3])+"\n"+
+#              str(vision[3:6])+"\n"+
+#              str(vision[6:9])+"\n")
+#        print("Action values: "+str(action_values))
         while True:
             if ((random.random() > self.epsilon) or (test_knowledge and _i < 5)):
                 # t.max(1) will return largest column value of each row.
                 # second column on max result is index of where max element was
                 # found, so we pick action with the larger expected reward.
-                print("Optimal action: ", end="")
+#                print("Optimal action: ", end="")
                 action = action_values.max(0)[0].max(0)[0].view(1, 1)
-                print(str(action)+", ", end="")
+#                print(str(action)+", ", end="")
                 action_list = list(action_values)
                 action = torch.tensor([[action_list.index(action)]])
 #                action = np.average(action_values.cpu().data.numpy(),axis=1)
 #                action = np.argmax(action_values.cpu().data.numpy())
             else:
-                print("Random action: ", end="")
+#                print("Random action: ", end="")
                 action = torch.tensor([[random.randrange(self.action_size)]])
 #                action = random.choice(np.arange(self.action_size))
-            print(action,self.actions[action])
+#            print(action,self.actions[action])
             #if( (action == 0 and vision[1] != 'gold_block') or (action == 1 and vision[7] != 'gold_block') or
             #    (action == 2 and vision[3] != 'gold_block') or (action == 3 and vision[5] != 'gold_block') ):
             #    break
@@ -546,10 +538,10 @@ class deepQAgent(object):
             #self.moves.append(4)
             #self.moves.append(1)
             self.moves_temp.append(0)
-        print(self.moves_temp)
+#        print(self.moves_temp)
         self.moves = self.one_hot(torch.tensor(self.moves_temp), len(self.block_list)).flatten()
-        print("self.moves = " + str(self.moves))
-        print(len(self.moves))
+#        print("self.moves = " + str(self.moves))
+#        print(len(self.moves))
         # wait for a valid observation
         world_state = agent_host.peekWorldState()
         while world_state.is_mission_running and all(e.text == '{}' for e in world_state.observations):
@@ -759,7 +751,7 @@ class deepQAgent(object):
                 ### SPECIAL ###
                 # Here, we can replace our current spot with a normal block
                 # to indicate that the item has been picked up.
-                print(current_r)
+#                print(current_r)
                 # if current_r == 99:  # Reward of grass is 100 - 1
                 if obs[u'vision'][floor(len(obs[u'vision']) / 2)] == "grass":
                     # my_mission.drawBlock(int(obs[u'XPos']),45,int(obs[u'ZPos']),"sandstone")
@@ -866,7 +858,6 @@ class deepQAgent(object):
         # (NSWE to match action order)
         for x in range(world_x):
             for y in range(world_y):
-                s = "%d:%d" % (x,y)
                 self.canvas.create_rectangle( (world_x-1-x)*scale, (world_y-1-y)*scale, (world_x-1-x+1)*scale, (world_y-1-y+1)*scale, outline="#fff", fill="#000")
 
         if action_values is not None and curr_x is not None and curr_y is not None:
@@ -956,8 +947,8 @@ def encode_observations(vision:list=list()):
     result = []
     for item in vision:
         result.append(encode_dict[item])
-    print(str(vision[0:3])+"\n"+str(vision[3:6])+"\n"+str(vision[6:9]))
-    print(str(result[0:3])+"\n"+str(result[3:6])+"\n"+str(result[6:9]))
+#    print(str(vision[0:3])+"\n"+str(vision[3:6])+"\n"+str(vision[6:9]))
+#    print(str(result[0:3])+"\n"+str(result[3:6])+"\n"+str(result[6:9]))
     return result
 
 def XML_generator(x,y):
