@@ -75,7 +75,7 @@ class DQN(nn.Module):
         #self.D_in = 9 * 8 + 2 + 2
 
         #D_in = input dimension = (vision(9) * length of block_list(8)) * (1 current state + 2 past states))
-        self.D_in = (9 * 8) * (1+2)
+        self.D_in = (9 * 8) * (1+4)
 
         # D_out = output dimension = 4: 4 directions of move
         self.D_out = 4
@@ -157,15 +157,15 @@ class deepQAgent(object):
         self.block_list = ['sandstone', 'gold_block', 'red_sandstone', 'lapis_block',
                            'cobblestone', 'grass', 'lava', 'flowing_lava']               # all types of blocks agent can see
         self.buffer_size = int(1e5)             # replay buffer size
-        self.batch_size = 100                     # minibatch size
+        self.batch_size = 32                     # minibatch size
         self.learning_rate = learning_rate      # learning rate
         self.tau = tau                          # for soft update of target parameters
         self.epsilon= epsilon                   # inital epsilon-greedy
-        self.epsilon_decay = 0.00009              # how quickly to decay epsilon
+        self.epsilon_decay = 0.00018#0.00009              # how quickly to decay epsilon
         self.gamma = gamma                      # discount factor
-        self.update_every = 10                   # how often we updated the nn
+        self.update_every = 16                   # how often we updated the nn
         self.action_size = len(actions)
-        self.movement_memory = 2
+        self.movement_memory = 4
 
         # running PyTorch on cpu
         self.device = torch.device('cpu')
@@ -451,7 +451,7 @@ class deepQAgent(object):
 #              str(vision[6:9])+"\n")
 #        print("Action values: "+str(action_values))
         while True:
-            if ((random.random() > self.epsilon) or (test_knowledge and _i < 5)):
+            if ((random.random() > self.epsilon) or (test_knowledge and _i < 1)):
                 # t.max(1) will return largest column value of each row.
                 # second column on max result is index of where max element was
                 # found, so we pick action with the larger expected reward.
@@ -569,6 +569,8 @@ class deepQAgent(object):
         prev_x = obs[u'XPos']
         prev_z = obs[u'ZPos']
         print('Initial position:', prev_x, ',', prev_z)
+
+        self.drawQ_reward_history[str(prev_x)+','+str(prev_z)] = 0.0
 
         if save_images:
             # save the frame, for debugging
@@ -805,10 +807,10 @@ class deepQAgent(object):
         #self.policy_model.train()
 
         # wait for a frame to arrive after that
-        num_frames_seen = world_state.number_of_video_frames_since_last_state
-        while world_state.is_mission_running and world_state.number_of_video_frames_since_last_state == num_frames_seen:
-            world_state = agent_host.peekWorldState()
-        world_state = agent_host.getWorldState()
+        #num_frames_seen = world_state.number_of_video_frames_since_last_state
+        #while world_state.is_mission_running and world_state.number_of_video_frames_since_last_state == num_frames_seen:
+        #    world_state = agent_host.peekWorldState()
+        #world_state = agent_host.getWorldState()
 
         x = obs[u'XPos']
         z = obs[u'ZPos']
@@ -826,7 +828,7 @@ class deepQAgent(object):
         obs[u'XPos'] = x
         obs[u'ZPos'] = z
         state, action = self.act(world_state, agent_host, old_obs=obs)
-        current_r = sum(r.getValue() for r in world_state.rewards)
+        #current_r = sum(r.getValue() for r in world_state.rewards)
         agent.step(state, action, total_reward, next_state)
         self.drawQ_reward_history[str(obs[u'XPos']) + "," + str(obs[u'ZPos'])] = total_reward
 
@@ -874,8 +876,9 @@ class deepQAgent(object):
         # (NSWE to match action order)
         for x in range(world_x):
             for y in range(world_y):
-                self.canvas.create_rectangle( (world_x-1-x)*scale, (world_y-1-y)*scale, (world_x-1-x+1)*scale, (world_y-1-y+1)*scale, outline="#fff", fill="#000")
-                if str(x+0.5)+","+str(y+0.5) in self.drawQ_reward_history.keys():
+                visited = str(x+0.5)+","+str(y+0.5) in self.drawQ_reward_history.keys()
+                self.canvas.create_rectangle( (world_x-1-x)*scale, (world_y-1-y)*scale, (world_x-1-x+1)*scale, (world_y-1-y+1)*scale, outline="#fff" if not visited else "#00ff00", fill="#000" if not visited else "#006400")
+                if visited:
                     self.canvas.create_text((world_x - 1 - x + 0.5) * scale,
                                             (world_y - 1 - y + 0.5) * scale,
                                             text=str(self.drawQ_reward_history[str(x+0.5)+","+str(y+0.5)]),
@@ -1191,9 +1194,12 @@ try:
     
             my_clients = MalmoPython.ClientPool()
             my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10000))  # add Minecraft machines here as available
-            
-            print("\nMap %d - Mission %d of %d:" % (imap, i + 1, num_repeats))
 
+            test_knowledge = True if i % 5 == 0 else False
+
+            print("\nMap %d - Mission %d of %d:" % (imap, i, num_repeats))
+            root.wm_title("Q-table: "+"Map %d - Mission %d of %d %s:" % (imap, i, num_repeats,
+                                                                         "(TEST POLICY)" if test_knowledge else ""))
             my_mission_record = malmoutils.get_default_recording_object(agent_host,
                                                                         "./save_%s-map%d-rep%d" % (expID, imap, i))
 
@@ -1221,7 +1227,7 @@ try:
 
 
             # -- run the agent in the world -- #
-            test_knowledge = True if i % 5 == 0 else False
+
 
             cumulative_reward = agent.run(agent_host, test_knowledge)
             print('Cumulative reward: %d' % cumulative_reward)
