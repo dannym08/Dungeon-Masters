@@ -980,7 +980,9 @@ def encode_observations(vision:list=list()):
 def XML_generator(x,y):
     arena_width=x-1
     arena_height=y
-    used_pos = set((arena_width, arena_height-3))
+    used_pos = set()
+    used_pos.add((arena_width, arena_height-3))
+    used_pos.add((arena_width, arena_height))
     
     # make sure nothing spawns on top of starting position
     used_pos.add((4,1))
