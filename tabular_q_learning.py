@@ -829,7 +829,7 @@ class deepQAgent(object):
         obs[u'ZPos'] = z
         state, action = self.act(world_state, agent_host, old_obs=obs)
         #current_r = sum(r.getValue() for r in world_state.rewards)
-        agent.step(state, action, total_reward, next_state)
+        agent.step(state, action, total_reward, state)
         self.drawQ_reward_history[str(obs[u'XPos']) + "," + str(obs[u'ZPos'])] = total_reward
 
         # update epsilon for next run but don't let epsilon get below 0.01
