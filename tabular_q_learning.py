@@ -937,13 +937,13 @@ def add_enemies(arena_width,arena_height, used_pos):
         xml += '''<DrawCuboid x1="''' + str(x) + '''" y1="45" z1="''' + str(z) + '''" x2="''' + str(x-2) + '''" y2="45" z2="''' + str(z+2) + '''" type="red_sandstone"/>'''
         xml += '''<DrawEntity x="''' + str(x-0.5) + '''" y="45" z="''' + str(z+1.5) + '''"  type="Villager" />'''
     
-    used_pos = used_pos.union(enemy_vision)
-    print(used_pos)
+    used_pos.update(enemy_vision)
     return xml
 
 
 def add_items(arena_width, arena_height, used_pos, items_count=1):
     xml = ""
+    print(used_pos)
     
     for i in range(items_count):
 
