@@ -1005,6 +1005,35 @@ class XMLGenerator:
                    ("gold_block" if random.randint(0,1) else "lava") + '''" />'''
         return xml
 
+    def set_goal(self, x=None,y=None):
+        arena_width = self.arena_width
+        arena_height = self.arena_height
+        used_pos = self.used_pos
+
+        xml = ""
+        print(used_pos)
+
+        z = y
+        while (x is None or z is None) or (x,z) in used_pos:
+            x = random.randint(0, arena_width)
+            z = random.randint(arena_height-2, arena_height - 1)
+            #input("x = "+str(x)+", y = "+str(y)+"...")
+
+        used_pos.update((x, z))
+        used_pos.add((x, z + 1))
+        used_pos.add((x, z + 2))
+        used_pos.add((x - 1, z))
+        used_pos.add((x - 1, z + 1))
+        used_pos.add((x - 1, z + 2))
+        used_pos.add((x - 2, z))
+        used_pos.add((x - 2, z + 1))
+        used_pos.add((x - 2, z + 2))
+
+        xml += '''<DrawItem x="''' + str(x) + '''" y="46" z="''' + str(z) + '''" type="diamond" />''' + \
+            '''<DrawBlock x="''' + str(x) + '''" y="45" z="''' + str(z) + '''" type="lapis_block" />'''
+
+        return xml
+
     def XML_generator(self):
         arena_width = self.arena_width
         arena_height = self.arena_height
@@ -1055,9 +1084,9 @@ class XMLGenerator:
                               <DrawCuboid x1="-1"  y1="45" z1="''' + str(arena_height) + '''"  x2="''' + str(
             arena_width + 1) + '''" y2="45" z2="''' + str(arena_height) + '''" type="gold_block" />           <!-- Top wall from start position -->
     
-                              <DrawBlock  x="''' + str(arena_width) + '''"   y="45"  z="''' + str(arena_height - 1) + '''" type="lapis_block" />                           <!-- the destination marker -->
-                              <DrawItem   x="''' + str(arena_width) + '''"   y="46"  z="''' + str(arena_height - 1) + '''" type="diamond" />                               <!-- another destination marker -->
-    
+                              <!-- Goal -->
+                              ''' + self.set_goal(x=arena_width,y=arena_height-1) + '''
+                                  
                               <!-- Enemies -->
                               ''' + self.add_enemies(agent_host.getIntArgument('fenemies')) + '''
     
