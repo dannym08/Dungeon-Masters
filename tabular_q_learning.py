@@ -909,71 +909,216 @@ class deepQAgent(object):
 
         self.root.update()
 
-def add_enemies(arena_width,arena_height, used_pos):
-    xml = ""
-    # vision around enemies
-    enemy_vision = set()
+class XMLGenerator:
+    def __init__(self, x, y):
+        self.arena_width = x - 1
+        self.arena_height = y
+        self.used_pos = set()
+        self.reset()
 
-    smaller_dim = min(arena_width, arena_height)
-    enemies = (smaller_dim-1)//3
+    def reset(self):
+        self.reset_used_pos()
 
-    for i in range(enemies):
-        while True:
-            x = random.randint(2, arena_width)
-            z = random.randint(0, arena_height-4)
-            while (z <= 2 ) and x in range(3, 4+3):
+    def reset_used_pos(self):
+        self.used_pos = set()
+        self.used_pos.add((self.arena_width, self.arena_height - 3))
+        self.used_pos.add((self.arena_width, self.arena_height))
+
+    def add_enemies(self, count=-1):
+        arena_width = self.arena_width
+        arena_height = self.arena_height
+        used_pos = self.used_pos
+
+        xml = ""
+        # vision around enemies
+        enemy_vision = set()
+
+        if count <= -1:
+            smaller_dim = min(arena_width, arena_height)
+            enemies = (smaller_dim-1)//3
+        else:
+            enemies = count
+
+        for i in range(enemies):
+            while True:
                 x = random.randint(2, arena_width)
                 z = random.randint(0, arena_height-4)
-            if (x,z) not in used_pos:
-                break
+                while (z <= 2 ) and x in range(3, 4+3):
+                    x = random.randint(2, arena_width)
+                    z = random.randint(0, arena_height-4)
+                if (x,z) not in used_pos:
+                    break
 
-        used_pos.add((x,z))
-        enemy_vision.add((x,z+1))
-        enemy_vision.add((x,z+2))
-        enemy_vision.add((x-1,z))
-        enemy_vision.add((x-1,z+1))
-        enemy_vision.add((x-1,z+2))
-        enemy_vision.add((x-2,z))
-        enemy_vision.add((x-2,z+1))
-        enemy_vision.add((x-2,z+2))
-        
-        xml += '''<DrawCuboid x1="''' + str(x) + '''" y1="45" z1="''' + str(z) + '''" x2="''' + str(x-2) + '''" y2="45" z2="''' + str(z+2) + '''" type="red_sandstone"/>'''
-        xml += '''<DrawEntity x="''' + str(x-0.5) + '''" y="45" z="''' + str(z+1.5) + '''"  type="Villager" />'''
+            used_pos.add((x,z))
+            enemy_vision.add((x,z+1))
+            enemy_vision.add((x,z+2))
+            enemy_vision.add((x-1,z))
+            enemy_vision.add((x-1,z+1))
+            enemy_vision.add((x-1,z+2))
+            enemy_vision.add((x-2,z))
+            enemy_vision.add((x-2,z+1))
+            enemy_vision.add((x-2,z+2))
+
+            xml += '''<DrawCuboid x1="''' + str(x) + '''" y1="45" z1="''' + str(z) + '''" x2="''' + str(x-2) + '''" y2="45" z2="''' + str(z+2) + '''" type="red_sandstone"/>'''
+            xml += '''<DrawEntity x="''' + str(x-0.5) + '''" y="45" z="''' + str(z+1.5) + '''"  type="Villager" />'''
+
+        used_pos.update(enemy_vision)
+        return xml
+
+    def add_items(self, items_count=1):
+        arena_width = self.arena_width
+        arena_height = self.arena_height
+        used_pos = self.used_pos
+
+        xml = ""
+        print(used_pos)
+
+        for i in range(items_count):
+
+            while True:
+                x = random.randint(0, arena_width)
+                z = random.randint(0, arena_height - 1)
+                if (x,z) not in used_pos:
+                    break
+            used_pos.update((x, z))
+            xml += '''<DrawItem x="''' + str(x) + '''" y="46" z="''' + str(z) + '''" type="diamond" />''' + \
+                '''<DrawBlock x="''' + str(x) + '''" y="45" z="''' + str(z) + '''" type="grass" />'''
+        return xml
+
+    def add_random_walls_and_lava(self, count=1):
+        arena_width = self.arena_width
+        arena_height = self.arena_height
+        used_pos = self.used_pos
+
+        xml = ""
+        print(used_pos)
+
+        for i in range(count):
+
+            while True:
+                x = random.randint(0, arena_width)
+                z = random.randint(0, arena_height - 1)
+                if (x, z) not in used_pos:
+                    break
+            used_pos.update((x, z))
+            xml += '''<DrawBlock x="''' + str(x) + '''" y="45" z="''' + str(z) + '''" type="'''+\
+                   ("gold_block" if random.randint(0,1) else "lava") + '''" />'''
+        return xml
+
+    def XML_generator(self):
+        arena_width = self.arena_width
+        arena_height = self.arena_height
+        used_pos = self.used_pos
+
+        # make sure nothing spawns on top of starting position
+        used_pos.add((4, 1))
+
+        xml = '''<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+                    <Mission xmlns="http://ProjectMalmo.microsoft.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     
-    used_pos.update(enemy_vision)
-    return xml
-
-def add_items(arena_width, arena_height, used_pos, items_count=1):
-    xml = ""
-    print(used_pos)
+                      <About>
+                        <Summary>Avoiding enemies to get to target.</Summary>
+                      </About>
     
-    for i in range(items_count):
+                      <ModSettings>
+                        <MsPerTick>40</MsPerTick>
+                      </ModSettings>
+    
+                      <ServerSection>
+                          <ServerInitialConditions>
+                                <Time>
+                                    <StartTime>6000</StartTime>
+                                    <AllowPassageOfTime>false</AllowPassageOfTime>
+                                </Time>
+                                <Weather>clear</Weather>
+                                <AllowSpawning>false</AllowSpawning>
+                          </ServerInitialConditions>
+                        <ServerHandlers>
+                          <FlatWorldGenerator generatorString="3;7,220*1,5*3,2;3;,biome_1"/>
+                          <DrawingDecorator>
+    
+                              <!-- coordinates for cuboid are inclusive -->
+                              <DrawCuboid x1="-2" y1="46" z1="-2" x2="''' + str(
+            arena_width + 2) + '''" y2="50" z2="''' + str(arena_height + 2) + '''" type="air" />            <!-- limits of our arena -->
+                              <DrawCuboid x1="-2" y1="45" z1="-2" x2="''' + str(
+            arena_width + 2) + '''" y2="45" z2="''' + str(arena_height + 2) + '''" type="lava" />           <!-- lava floor -->
+                              <DrawCuboid x1="-1"  y1="44" z1="0"  x2="''' + str(arena_width) + '''" y2="45" z2="''' + str(
+            arena_height) + '''" type="sandstone" />      <!-- floor of the arena -->
+    
+                              <DrawBlock  x="4"   y="45"  z="1"  type="cobblestone" />                           <!-- the starting marker -->
+    
+                              <!-- Boundary -->
+                              <DrawCuboid x1="''' + str(arena_width + 1) + '''"  y1="45" z1="-1"  x2="''' + str(
+            arena_width + 1) + '''" y2="45" z2="''' + str(arena_height) + '''" type="gold_block" />           <!-- Left wall from start position -->
+                              <DrawCuboid x1="-1"  y1="45" z1="-1"  x2="''' + str(arena_width + 1) + '''" y2="45" z2="-1" type="gold_block" />			  <!-- Bottom wall from start position -->
+                              <DrawCuboid x1="-1"  y1="45" z1="-1"  x2="-1" y2="45" z2="''' + str(arena_height) + '''" type="gold_block" />           <!-- Right wall from start position -->
+                              <DrawCuboid x1="-1"  y1="45" z1="''' + str(arena_height) + '''"  x2="''' + str(
+            arena_width + 1) + '''" y2="45" z2="''' + str(arena_height) + '''" type="gold_block" />           <!-- Top wall from start position -->
+    
+                              <DrawBlock  x="''' + str(arena_width) + '''"   y="45"  z="''' + str(arena_height - 1) + '''" type="lapis_block" />                           <!-- the destination marker -->
+                              <DrawItem   x="''' + str(arena_width) + '''"   y="46"  z="''' + str(arena_height - 1) + '''" type="diamond" />                               <!-- another destination marker -->
+    
+                              <!-- Enemies -->
+                              ''' + self.add_enemies(agent_host.getIntArgument('fenemies')) + '''
+    
+                              <!-- Items -->
+                              ''' + self.add_items(agent_host.getIntArgument('items')) + '''
+    
+                              <!-- Extra Walls and Lava -->
+                              ''' + self.add_random_walls_and_lava(agent_host.getIntArgument('obstacles')) + '''
+    
+                          </DrawingDecorator>
+                          <ServerQuitFromTimeUp timeLimitMs="20000"/>
+                          <ServerQuitWhenAnyAgentFinishes/>
+                        </ServerHandlers>
+                      </ServerSection>
+    
+                      <AgentSection mode="Survival">
+                        <Name>Master</Name>
+                        <AgentStart>
+                          <Placement x="4.5" y="46.0" z="1.5" pitch="70" yaw="0"/>
+                          <Inventory>
+                          </Inventory>
+                        </AgentStart>
+                        <AgentHandlers>
+                          <ObservationFromFullStats/>
+                          <ChatCommands/>
+                          <ObservationFromChat/>
+                          <ObservationFromGrid>
+                              <Grid name="vision">
+                                <min x="-1" y="-1" z="-1"/>
+                                <max x="1" y="-1" z="1"/>
+                              </Grid>
+                          </ObservationFromGrid>
+                          <VideoProducer want_depth="false">
+                              <Width>160</Width>
+                              <Height>120</Height>
+                          </VideoProducer>
+                          <DiscreteMovementCommands>
+                              <ModifierList type="deny-list">
+                                <command>attack</command>
+                              </ModifierList>
+                          </DiscreteMovementCommands>
+                          <RewardForTouchingBlockType>
+                            <Block reward="-10000.0" type="lava" behaviour="onceOnly"/>
+                            <Block reward="1000.0" type="lapis_block" behaviour="onceOnly"/>
+                            <Block reward="-100.0" type="red_sandstone" behaviour="onceOnly"/>
+                            <Block reward="0.0" type="gold_block"/>
+                            <Block reward="20" type="grass" />
+                          </RewardForTouchingBlockType>
+                          <RewardForSendingCommand reward="-1"/>
+                          <AgentQuitFromTouchingBlockType>
+                              <Block type="lava" />
+                              <Block type="lapis_block" />
+                              <Block type="red_sandstone" />
+                              <Block type="stone" />
+                          </AgentQuitFromTouchingBlockType>
+                        </AgentHandlers>
+                      </AgentSection>
+    
+                    </Mission>'''
+        return xml
 
-        while True:
-            x = random.randint(0, arena_width)
-            z = random.randint(0, arena_height - 1)
-            if (x,z) not in used_pos:
-                break
-        used_pos.update((x, z))
-        xml += '''<DrawItem x="''' + str(x) + '''" y="46" z="''' + str(z) + '''" type="diamond" />''' + \
-            '''<DrawBlock x="''' + str(x) + '''" y="45" z="''' + str(z) + '''" type="grass" />'''
-    return xml
-
-def add_random_walls_and_lava(arena_width, arena_height, used_pos, count=1):
-    xml = ""
-    print(used_pos)
-
-    for i in range(count):
-
-        while True:
-            x = random.randint(0, arena_width)
-            z = random.randint(0, arena_height - 1)
-            if (x, z) not in used_pos:
-                break
-        used_pos.update((x, z))
-        xml += '''<DrawBlock x="''' + str(x) + '''" y="45" z="''' + str(z) + '''" type="'''+\
-               ("gold_block" if random.randint(0,1) else "lava") + '''" />'''
-    return xml
 
 def encode_observations(vision:list=list()):
     encode_dict = defaultdict(lambda: 0,
@@ -994,118 +1139,6 @@ def encode_observations(vision:list=list()):
 #    print(str(vision[0:3])+"\n"+str(vision[3:6])+"\n"+str(vision[6:9]))
 #    print(str(result[0:3])+"\n"+str(result[3:6])+"\n"+str(result[6:9]))
     return result
-
-def XML_generator(x,y):
-    arena_width=x-1
-    arena_height=y
-    used_pos = set()
-    used_pos.add((arena_width, arena_height-3))
-    used_pos.add((arena_width, arena_height))
-    
-    # make sure nothing spawns on top of starting position
-    used_pos.add((4,1))
-    
-    xml = '''<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
-                <Mission xmlns="http://ProjectMalmo.microsoft.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-                
-                  <About>
-                    <Summary>Avoiding enemies to get to target.</Summary>
-                  </About>
-                  
-                  <ModSettings>
-                    <MsPerTick>40</MsPerTick>
-                  </ModSettings>
-                
-                  <ServerSection>
-                      <ServerInitialConditions>
-                            <Time>
-                                <StartTime>6000</StartTime>
-                                <AllowPassageOfTime>false</AllowPassageOfTime>
-                            </Time>
-                            <Weather>clear</Weather>
-                            <AllowSpawning>false</AllowSpawning>
-                      </ServerInitialConditions>
-                    <ServerHandlers>
-                      <FlatWorldGenerator generatorString="3;7,220*1,5*3,2;3;,biome_1"/>
-                      <DrawingDecorator>
-                        
-                          <!-- coordinates for cuboid are inclusive -->
-                          <DrawCuboid x1="-2" y1="46" z1="-2" x2="'''+str(arena_width+2)+'''" y2="50" z2="'''+str(arena_height+2)+'''" type="air" />            <!-- limits of our arena -->
-                          <DrawCuboid x1="-2" y1="45" z1="-2" x2="'''+str(arena_width+2)+'''" y2="45" z2="'''+str(arena_height+2)+'''" type="lava" />           <!-- lava floor -->
-                          <DrawCuboid x1="-1"  y1="44" z1="0"  x2="'''+str(arena_width)+'''" y2="45" z2="'''+str(arena_height)+'''" type="sandstone" />      <!-- floor of the arena -->
-                		  
-                          <DrawBlock  x="4"   y="45"  z="1"  type="cobblestone" />                           <!-- the starting marker -->
-                    		  
-                          <!-- Boundary -->
-                          <DrawCuboid x1="'''+str(arena_width+1)+'''"  y1="45" z1="-1"  x2="'''+str(arena_width+1)+'''" y2="45" z2="'''+str(arena_height)+'''" type="gold_block" />           <!-- Left wall from start position -->
-                          <DrawCuboid x1="-1"  y1="45" z1="-1"  x2="'''+str(arena_width+1)+'''" y2="45" z2="-1" type="gold_block" />			  <!-- Bottom wall from start position -->
-                          <DrawCuboid x1="-1"  y1="45" z1="-1"  x2="-1" y2="45" z2="'''+str(arena_height)+'''" type="gold_block" />           <!-- Right wall from start position -->
-                          <DrawCuboid x1="-1"  y1="45" z1="'''+str(arena_height)+'''"  x2="'''+str(arena_width+1)+'''" y2="45" z2="'''+str(arena_height)+'''" type="gold_block" />           <!-- Top wall from start position -->
-                
-                          <DrawBlock  x="''' + str(arena_width) + '''"   y="45"  z="''' + str(arena_height-1) + '''" type="lapis_block" />                           <!-- the destination marker -->
-                          <DrawItem   x="''' + str(arena_width) + '''"   y="46"  z="''' + str(arena_height-1) + '''" type="diamond" />                               <!-- another destination marker -->
-                		  
-                          <!-- Enemies -->
-                          '''+ add_enemies(arena_width, arena_height, used_pos) + '''
-                          
-                          <!-- Items -->
-                          '''+ add_items(arena_width, arena_height, used_pos, agent_host.getIntArgument('i')) + '''
-                          
-                          <!-- Extra Walls and Lava -->
-                          '''+ add_random_walls_and_lava(arena_width, arena_height, used_pos, agent_host.getIntArgument('l')) + '''
-                		  
-                      </DrawingDecorator>
-                      <ServerQuitFromTimeUp timeLimitMs="20000"/>
-                      <ServerQuitWhenAnyAgentFinishes/>
-                    </ServerHandlers>
-                  </ServerSection>
-                
-                  <AgentSection mode="Survival">
-                    <Name>Master</Name>
-                    <AgentStart>
-                      <Placement x="4.5" y="46.0" z="1.5" pitch="70" yaw="0"/>
-                      <Inventory>
-                      </Inventory>
-                    </AgentStart>
-                    <AgentHandlers>
-                      <ObservationFromFullStats/>
-                      <ChatCommands/>
-                      <ObservationFromChat/>
-                      <ObservationFromGrid>
-                          <Grid name="vision">
-                            <min x="-1" y="-1" z="-1"/>
-                            <max x="1" y="-1" z="1"/>
-                          </Grid>
-                      </ObservationFromGrid>
-                      <VideoProducer want_depth="false">
-                          <Width>160</Width>
-                          <Height>120</Height>
-                      </VideoProducer>
-                      <DiscreteMovementCommands>
-                          <ModifierList type="deny-list">
-                            <command>attack</command>
-                          </ModifierList>
-                      </DiscreteMovementCommands>
-                      <RewardForTouchingBlockType>
-                        <Block reward="-10000.0" type="lava" behaviour="onceOnly"/>
-                        <Block reward="1000.0" type="lapis_block" behaviour="onceOnly"/>
-                        <Block reward="-100.0" type="red_sandstone" behaviour="onceOnly"/>
-                        <Block reward="0.0" type="gold_block"/>
-                        <Block reward="20" type="grass" />
-                      </RewardForTouchingBlockType>
-                      <RewardForSendingCommand reward="-1"/>
-                      <AgentQuitFromTouchingBlockType>
-                          <Block type="lava" />
-                          <Block type="lapis_block" />
-                          <Block type="red_sandstone" />
-                		  <Block type="stone" />
-                      </AgentQuitFromTouchingBlockType>
-                    </AgentHandlers>
-                  </AgentSection>
-                
-                </Mission>'''
-    return xml
-
 
 
 agent_host = MalmoPython.AgentHost()
@@ -1144,8 +1177,9 @@ agent_host.addOptionalStringArgument('model_file', 'Path to the initial model fi
 agent_host.addOptionalFlag('debug', 'Turn on debugging.')
 agent_host.addOptionalIntArgument('x','The width of the arena.',10)
 agent_host.addOptionalIntArgument('y','The width of the arena.',10)
-agent_host.addOptionalIntArgument('i','The total number of small items in the arena (except the goal)', 5)
-agent_host.addOptionalIntArgument('l','The total number of extra walls/lava, for interest', 5)
+agent_host.addOptionalIntArgument('items','The total number of small items in the arena (except the goal)', 5)
+agent_host.addOptionalIntArgument('obstacles','The total number of extra walls/lava, for interest', 5)
+agent_host.addOptionalIntArgument('fenemies','The total number of enemies', -1)
 agent_host.addOptionalStringArgument('policy_file', 'Load policy model from path','')
 agent_host.addOptionalStringArgument('target_file', 'Load target model from path','')
 malmoutils.parse_command_line(agent_host)
@@ -1203,7 +1237,7 @@ try:
         for i in range(num_repeats):
 
             # -- set up the mission -- #
-            mission_xml = XML_generator(x=world_x,y=world_y)
+            mission_xml = XMLGenerator(x=world_x,y=world_y).XML_generator()
             my_mission = MalmoPython.MissionSpec(mission_xml, True)
             my_mission.removeAllCommandHandlers()
             my_mission.allowAllChatCommands()
