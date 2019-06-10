@@ -943,7 +943,6 @@ def add_enemies(arena_width,arena_height, used_pos):
     used_pos.update(enemy_vision)
     return xml
 
-
 def add_items(arena_width, arena_height, used_pos, items_count=1):
     xml = ""
     print(used_pos)
@@ -955,9 +954,25 @@ def add_items(arena_width, arena_height, used_pos, items_count=1):
             z = random.randint(0, arena_height - 1)
             if (x,z) not in used_pos:
                 break
-
+        used_pos.update((x, z))
         xml += '''<DrawItem x="''' + str(x) + '''" y="46" z="''' + str(z) + '''" type="diamond" />''' + \
             '''<DrawBlock x="''' + str(x) + '''" y="45" z="''' + str(z) + '''" type="grass" />'''
+    return xml
+
+def add_random_walls_and_lava(arena_width, arena_height, used_pos, count=1):
+    xml = ""
+    print(used_pos)
+
+    for i in range(count):
+
+        while True:
+            x = random.randint(0, arena_width)
+            z = random.randint(0, arena_height - 1)
+            if (x, z) not in used_pos:
+                break
+        used_pos.update((x, z))
+        xml += '''<DrawBlock x="''' + str(x) + '''" y="45" z="''' + str(z) + '''" type="'''+\
+               ("gold_block" if random.randint(0,1) else "lava") + '''" />'''
     return xml
 
 def encode_observations(vision:list=list()):
@@ -1035,6 +1050,9 @@ def XML_generator(x,y):
                           
                           <!-- Items -->
                           '''+ add_items(arena_width, arena_height, used_pos, agent_host.getIntArgument('i')) + '''
+                          
+                          <!-- Extra Walls and Lava -->
+                          '''+ add_random_walls_and_lava(arena_width, arena_height, used_pos, agent_host.getIntArgument('l')) + '''
                 		  
                       </DrawingDecorator>
                       <ServerQuitFromTimeUp timeLimitMs="20000"/>
@@ -1127,6 +1145,7 @@ agent_host.addOptionalFlag('debug', 'Turn on debugging.')
 agent_host.addOptionalIntArgument('x','The width of the arena.',10)
 agent_host.addOptionalIntArgument('y','The width of the arena.',10)
 agent_host.addOptionalIntArgument('i','The total number of small items in the arena (except the goal)', 5)
+agent_host.addOptionalIntArgument('l','The total number of extra walls/lava, for interest', 5)
 agent_host.addOptionalStringArgument('policy_file', 'Load policy model from path','')
 agent_host.addOptionalStringArgument('target_file', 'Load target model from path','')
 malmoutils.parse_command_line(agent_host)
