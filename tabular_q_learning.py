@@ -943,6 +943,9 @@ class XMLGenerator:
         self.used_pos.add((self.arena_width, self.arena_height - 3))
         self.used_pos.add((self.arena_width, self.arena_height))
 
+    def reset_drawQ_map(self):
+        self.drawQ_map = defaultdict(str)
+
     def add_enemies(self, count=-1):
         arena_width = self.arena_width
         arena_height = self.arena_height
@@ -1131,8 +1134,7 @@ class XMLGenerator:
                               <DrawCuboid x1="-1"  y1="45" z1="''' + str(arena_height) + '''"  x2="''' + str(
             arena_width + 1) + '''" y2="45" z2="''' + str(arena_height) + '''" type="gold_block" />           <!-- Top wall from start position -->
     
-                              <!-- Goal -->
-                              ''' + self.set_goal(x=arena_width,y=arena_height-1) + '''
+                              
                                   
                               <!-- Enemies -->
                               ''' + self.add_enemies(agent_host.getIntArgument('fenemies')) + '''
@@ -1142,6 +1144,9 @@ class XMLGenerator:
     
                               <!-- Extra Walls and Lava -->
                               ''' + self.add_random_walls_and_lava(agent_host.getIntArgument('obstacles')) + '''
+                              
+                              <!-- Goal -->
+                              ''' + self.set_goal(x=arena_width,y=arena_height-1) + '''
     
                           </DrawingDecorator>
                           <ServerQuitFromTimeUp timeLimitMs="50000"/>
@@ -1152,7 +1157,7 @@ class XMLGenerator:
                       <AgentSection mode="Survival">
                         <Name>Master</Name>
                         <AgentStart>
-                          <Placement x="4.5" y="46.0" z="1.5" pitch="70" yaw="0"/>
+                          <Placement x="4.5" y="46.0" z="1.5" pitch="80" yaw="0"/>
                           <Inventory>
                           </Inventory>
                         </AgentStart>
@@ -1193,6 +1198,7 @@ class XMLGenerator:
                       </AgentSection>
     
                     </Mission>'''
+        self.used_pos = used_pos
         return xml
 
 
