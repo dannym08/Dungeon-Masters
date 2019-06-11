@@ -213,6 +213,7 @@ class deepQAgent(object):
         self.moves_temp = deque(maxlen=self.movement_memory*9)
 
         self.drawQ_reward_history = defaultdict(str)
+        self.drawQ_map = defaultdict(str)
 
     def step(self, state, action, reward, next_state):
 #        print()
@@ -451,7 +452,7 @@ class deepQAgent(object):
 #              str(vision[6:9])+"\n")
 #        print("Action values: "+str(action_values))
         while True:
-            if ((random.random() > self.epsilon) or (test_knowledge and _i < 1)):
+            if (_i < 1 and ((random.random() > self.epsilon) or test_knowledge)):
                 # t.max(1) will return largest column value of each row.
                 # second column on max result is index of where max element was
                 # found, so we pick action with the larger expected reward.
@@ -474,7 +475,7 @@ class deepQAgent(object):
                 (action == 2 and vision[3] != 'gold_block') or (action == 3 and vision[5] != 'gold_block') ):
                 break
             else:
-            #    print("abort (wall)")
+                print("abort (wall)")
                 _i += 1
 
 #        self.moves.append(action)
@@ -528,6 +529,9 @@ class deepQAgent(object):
         tol = 0.01
 
         self.drawQ_reward_history = defaultdict(str)
+        #print(self.drawQ_map)
+        #input("Enter...")
+        #self.drawQ_map = defaultdict(str)
 
 #        self.prev_s = None
 #        self.prev_a = None
@@ -876,11 +880,25 @@ class deepQAgent(object):
         # (NSWE to match action order)
         for x in range(world_x):
             for y in range(world_y):
+                #print(x)
+                #print(y)
+                #print(self.drawQ_map[str(x)+","+str(y)])
+                #input([i for i in self.drawQ_map.keys()])
+                block_color = self.drawQ_map[str(x)+","+str(y)] if self.drawQ_map[str(x)+","+str(y)] != "" else "#000"
+                #print(block_color)
+                self.canvas.create_rectangle((world_x - 1 - x) * scale, (world_y - 1 - y) * scale,
+                                             (world_x - 1 - x + 1) * scale, (world_y - 1 - y + 1) * scale,
+                                             outline="#fff",
+                                             fill=block_color)
+
                 visited = str(x+0.5)+","+str(y+0.5) in self.drawQ_reward_history.keys()
-                self.canvas.create_rectangle( (world_x-1-x)*scale, (world_y-1-y)*scale, (world_x-1-x+1)*scale, (world_y-1-y+1)*scale, outline="#fff" if not visited else "#00ff00", fill="#000" if not visited else "#006400")
+                self.canvas.create_rectangle( (world_x-1-x)*scale, (world_y-1-y)*scale, (world_x-1-x+1)*scale, (world_y-1-y+1)*scale,
+                                              outline="#ddd" if not visited else "#ddd",
+                                              fill=None if not visited else "#000064")
                 if visited:
                     self.canvas.create_text((world_x - 1 - x + 0.5) * scale,
                                             (world_y - 1 - y + 0.5) * scale,
+                                            font=("Arial",6),
                                             text=str(self.drawQ_reward_history[str(x+0.5)+","+str(y+0.5)]),
                                             fill="#fff")
 
@@ -914,6 +932,7 @@ class XMLGenerator:
         self.arena_width = x - 1
         self.arena_height = y
         self.used_pos = set()
+        self.drawQ_map = defaultdict(str)
         self.reset()
 
     def reset(self):
@@ -959,30 +978,50 @@ class XMLGenerator:
             enemy_vision.add((x-2,z+1))
             enemy_vision.add((x-2,z+2))
 
+            self.drawQ_map[str(x) + ',' + str(z)] = "#4e0000"
+            self.drawQ_map[str(x) + ',' + str(z + 1)] = "#4e0000"
+            self.drawQ_map[str(x) + ',' + str(z + 2)] = "#4e0000"
+            self.drawQ_map[str(x - 1) + ',' + str(z)] = "#4e0000"
+            self.drawQ_map[str(x - 1) + ',' + str(z + 1)] = "#4e0000"
+            self.drawQ_map[str(x - 1) + ',' + str(z + 2)] = "#4e0000"
+            self.drawQ_map[str(x - 2) + ',' + str(z)] = "#4e0000"
+            self.drawQ_map[str(x - 2) + ',' + str(z + 1)] = "#4e0000"
+            self.drawQ_map[str(x - 2) + ',' + str(z + 2)] = "#4e0000"
+
             xml += '''<DrawCuboid x1="''' + str(x) + '''" y1="45" z1="''' + str(z) + '''" x2="''' + str(x-2) + '''" y2="45" z2="''' + str(z+2) + '''" type="red_sandstone"/>'''
             xml += '''<DrawEntity x="''' + str(x-0.5) + '''" y="45" z="''' + str(z+1.5) + '''"  type="Villager" />'''
 
         used_pos.update(enemy_vision)
+
+        self.used_pos = used_pos
         return xml
 
-    def add_items(self, items_count=1):
+    def add_items(self, items_count=-1):
         arena_width = self.arena_width
         arena_height = self.arena_height
         used_pos = self.used_pos
 
         xml = ""
-        print(used_pos)
+        #print(used_pos)
+
+        if items_count == -1:
+            # Use algorithm
+            smaller_dim = min(arena_width, arena_height)
+            items_count = (smaller_dim - 1) // 3
 
         for i in range(items_count):
-
             while True:
                 x = random.randint(0, arena_width)
                 z = random.randint(0, arena_height - 1)
                 if (x,z) not in used_pos:
                     break
             used_pos.update((x, z))
+            self.drawQ_map[str(x)+','+str(z)] = "#003b00"
+
             xml += '''<DrawItem x="''' + str(x) + '''" y="46" z="''' + str(z) + '''" type="diamond" />''' + \
                 '''<DrawBlock x="''' + str(x) + '''" y="45" z="''' + str(z) + '''" type="grass" />'''
+
+        self.used_pos = used_pos
         return xml
 
     def add_random_walls_and_lava(self, count=1):
@@ -991,7 +1030,7 @@ class XMLGenerator:
         used_pos = self.used_pos
 
         xml = ""
-        print(used_pos)
+        #print(used_pos)
 
         for i in range(count):
 
@@ -1002,7 +1041,9 @@ class XMLGenerator:
                     break
             used_pos.update((x, z))
             xml += '''<DrawBlock x="''' + str(x) + '''" y="45" z="''' + str(z) + '''" type="'''+\
-                   ("gold_block" if random.randint(0,1) else "lava") + '''" />'''
+                   ("lava" if random.randint(0,1) else "lava") + '''" />'''
+            self.drawQ_map[str(x)+','+str(z)] = "#4e0000"
+        self.used_pos = used_pos
         return xml
 
     def set_goal(self, x=None,y=None):
@@ -1029,10 +1070,16 @@ class XMLGenerator:
         used_pos.add((x - 2, z + 1))
         used_pos.add((x - 2, z + 2))
 
+        self.drawQ_map[str(x) + ',' + str(z)] = "#00ffff"
+
         xml += '''<DrawItem x="''' + str(x) + '''" y="46" z="''' + str(z) + '''" type="diamond" />''' + \
             '''<DrawBlock x="''' + str(x) + '''" y="45" z="''' + str(z) + '''" type="lapis_block" />'''
 
+        self.used_pos = used_pos
         return xml
+
+    def get_drawQ_map(self):
+        return self.drawQ_map
 
     def XML_generator(self):
         arena_width = self.arena_width
@@ -1097,7 +1144,7 @@ class XMLGenerator:
                               ''' + self.add_random_walls_and_lava(agent_host.getIntArgument('obstacles')) + '''
     
                           </DrawingDecorator>
-                          <ServerQuitFromTimeUp timeLimitMs="20000"/>
+                          <ServerQuitFromTimeUp timeLimitMs="50000"/>
                           <ServerQuitWhenAnyAgentFinishes/>
                         </ServerHandlers>
                       </ServerSection>
@@ -1204,17 +1251,17 @@ agent_host.addOptionalFloatArgument('gamma', 'Discount factor.', 0.99)
 agent_host.addOptionalFlag('load_model', 'Load initial model from model_file.')
 agent_host.addOptionalStringArgument('model_file', 'Path to the initial model file', '')
 agent_host.addOptionalFlag('debug', 'Turn on debugging.')
-agent_host.addOptionalIntArgument('x','The width of the arena.',10)
-agent_host.addOptionalIntArgument('y','The width of the arena.',10)
-agent_host.addOptionalIntArgument('items','The total number of small items in the arena (except the goal)', 5)
-agent_host.addOptionalIntArgument('obstacles','The total number of extra walls/lava, for interest', 5)
+agent_host.addOptionalIntArgument('x','The width of the arena.',25)
+agent_host.addOptionalIntArgument('y','The width of the arena.',25)
+agent_host.addOptionalIntArgument('items','The total number of small items in the arena (except the goal)', 10)
+agent_host.addOptionalIntArgument('obstacles','The total number of extra walls/lava, for interest', 0)
 agent_host.addOptionalIntArgument('fenemies','The total number of enemies', -1)
 agent_host.addOptionalStringArgument('policy_file', 'Load policy model from path','')
 agent_host.addOptionalStringArgument('target_file', 'Load target model from path','')
 malmoutils.parse_command_line(agent_host)
 
 # -- set up the python-side drawing -- #
-scale = 50
+scale = 30
 world_x = agent_host.getIntArgument('x')
 world_y = agent_host.getIntArgument('y')
 root = tk.Tk()
@@ -1266,7 +1313,9 @@ try:
         for i in range(num_repeats):
 
             # -- set up the mission -- #
-            mission_xml = XMLGenerator(x=world_x,y=world_y).XML_generator()
+            xml_object = XMLGenerator(x=world_x,y=world_y)
+            mission_xml= xml_object.XML_generator()
+            agent.drawQ_map = xml_object.get_drawQ_map()
             my_mission = MalmoPython.MissionSpec(mission_xml, True)
             my_mission.removeAllCommandHandlers()
             my_mission.allowAllChatCommands()
