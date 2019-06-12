@@ -74,7 +74,7 @@ class DQN(nn.Module):
         # same reasoning as above but without the visited information
         #self.D_in = 9 * 8 + 2 + 2
 
-        #D_in = input dimension = (vision(9) * length of block_list(8)) * (1 current state + 2 past states))
+        #D_in = input dimension = (vision(9) * length of block_list(8)) * (1 current state + 4 past states))
         self.D_in = (9 * 8) * (1+4)
 
         # D_out = output dimension = 4: 4 directions of move
@@ -122,24 +122,13 @@ class ReplayBuffer:
     def sample(self):
         """Randomly sample a batch of experiences from memory."""
         experiences = random.sample(self.memory, k=self.batch_size)
-
-#        print()
-#        print()
-#        print("experiences")
-#        print(experiences)
-#        print()
-#        print("sampling")
-
-#        print(np.vstack([exp.state for exp in experiences if exp is not None]))
+        
         states = torch.from_numpy(np.vstack([exp.state for exp in experiences if exp is not None])).float()#.to(deepQAgent.device)
 
-#        print(np.vstack([exp.action for exp in experiences if exp is not None]))
         actions = torch.from_numpy(np.vstack([exp.action for exp in experiences if exp is not None])).long()#.to(deepQAgent.device)
 
-#        print(np.vstack([exp.reward for exp in experiences if exp is not None]))
         rewards = torch.from_numpy(np.vstack([exp.reward for exp in experiences if exp is not None])).float()#.to(deepQAgent.device)
 
-#        print(np.vstack([exp.next_state for exp in experiences if exp is not None]))
         next_states = torch.from_numpy(np.vstack([exp.next_state for exp in experiences if exp is not None])).float()#.to(deepQAgent.device)
 
 
@@ -216,10 +205,6 @@ class deepQAgent(object):
         self.drawQ_map = defaultdict(str)
 
     def step(self, state, action, reward, next_state):
-#        print()
-#        print(state)
-#        print(next_state)
-#        print()
         # Save experience in replay memory
         self.memory.add(state, action, reward, next_state)
 
@@ -240,67 +225,16 @@ class deepQAgent(object):
         """
         states, actions, rewards, next_states = experiences
 
-#        print(actions.size())
-#        print(next_states.size())
         # Get max predicted Q values (for next states) from target model
         next_action_targets = self.target_model(next_states)
-#        print(next_action_targets.size())
-#        print(next_action_targets)
-#        print(next_action_targets.max(1)[0].unsqueeze(-1))
-#        print(np.average(next_action_targets.cpu().data.numpy(),axis=1))
         next_action = next_action_targets.max(1)[0].unsqueeze(-1)
-#        next_action = next_action_targets.max(1)[0].max(1)[0]
-#        next_action = np.max((np.average(next_action_targets.cpu().data.numpy(),axis=1)),axis=1)
-#        print("next action")
-#        print(next_action)
-#        print(len(next_action))
-#        next_targets = self.target_model(next_states).detach().max(1)[0]
-#        print(next_targets)
-#        print(next_targets.size())
-#        next_targets = self.target_model(next_states).detach().max(1)[0].unsqueeze(1)
-#        print(next_targets)
-#        print(next_targets.size())
-        # Compute Q targets for current states 
-#        print("gamma")
-#        print(gamma)
-#        print("next_action")
-#        print(next_action)
-#        print(next_action.size())
-#        print("rewards")
-#        print(rewards.size())
-#        print(rewards)
-#        print(gamma * next_action)
         targets = rewards + (gamma * torch.Tensor(next_action))
-#        print(torch.Tensor(next_action))
-#        print(gamma * torch.Tensor(next_action))
-#        print((gamma * torch.Tensor(next_action)))
-#        print((gamma * torch.Tensor(next_action)).size())
-#        print(rewards.size())
-#        print("targets")
-#        print(targets)
-#        print(targets.size())
 #
         # Get expected Q values from policy model
-#        print("actions")
-#        print(actions)
         action_policy = self.policy_model(states)
-#        actions = actions.expand_as(action_prob)
-#        expected_q = action_prob.gather(1, actions)
         policy = action_policy.gather(1, actions)
-#        policy = action_policy.max(1)[0].max(1)[0].unsqueeze(1)
-#        policy = torch.Tensor(np.max((np.average(action_policy.cpu().data.numpy(),axis=1)),axis=1)).unsqueeze(1)
-#        expected_q = self.policy_model(states).gather(1, actions)
-#        print(policy.size())
-#        print(policy)
-#
-#        print(policy)
-#        print(policy.size())
-#        print(targets)
-#        print(targets.size())
         # Compute loss
         loss = F.mse_loss(policy, targets)
-#        print(loss)
-#        print(prev)
         # Minimize the loss
         self.optimizer.zero_grad()
         loss.backward()
@@ -313,10 +247,6 @@ class deepQAgent(object):
         """Soft update model parameters.
         θ_target = τ*θ_policy + (1 - τ)*θ_target
         """
-#        print()
-#        print('target params: ', target_model.parameters())
-#        print('local params: ', policy_model.parameters())
-#        print()
         for target_param, policy_param in zip(target_model.parameters(), policy_model.parameters()):
             target_param.data.copy_(tau*policy_param.data + (1.0-tau)*target_param.data)
 
@@ -327,7 +257,6 @@ class deepQAgent(object):
             obs = json.loads(obs_text)  # most recent observation
         else:
             obs = old_obs
-        #print(obs)
 
         self.logger.debug(obs)
         if not u'XPos' in obs or not u'ZPos' in obs:
@@ -336,91 +265,16 @@ class deepQAgent(object):
         current_s = "%d,%d" % (int(obs[u'XPos']), int(obs[u'ZPos']))
         self.logger.debug("State: %s (x = %.2f, z = %.2f)" % (current_s, float(obs[u'XPos']), float(obs[u'ZPos'])))
 
-#        print()
-#        print("before command")
-#        print(obs)
-
         try:
             vision = obs['vision']
         except KeyError:
             vision = ["sandstone","sandstone","sandstone","sandstone","sandstone","sandstone","sandstone","sandstone","sandstone",] # 9 zeros
-        #encode = list()
-        #for block in vision:
-            #encode.append(self.block_list.index(block))
+
         encode = encode_observations(vision)
-
-#        input_state = self.one_hot(torch.tensor(encode), len(encode)).flatten()       .float()
-#        print(input_state)
-
-#        visits = list()
-##        print(self.visited)
-#        for surrounding in [(-1,-1), (-1, 0), (-1, 1), (0, -1), (0, 0), (0, 1), (1, -1), (1, 0), (1,1)]:
-#            if (int(curr_x) + surrounding[0], int(curr_z) + surrounding[1]) not in self.visited:
-#                visits.append(0)
-#            else: 
-#                visits.append(1)
 
         emb = self.one_hot(torch.tensor(encode), len(self.block_list))
 
-        #self.emb_temp = deepcopy(emb)
-#        print(emb)
-#        input_state = emb.flatten()
-#        print(input_state)
-
-#        emb_np = emb.detach().numpy()
-#        print()
-#        print(emb)
-#        print(emb.flatten())
-#        print(torch.cat((emb.flatten(), torch.as_tensor(visits).float())))
-#        input_state = torch.cat((emb.flatten(), torch.as_tensor(visits).float()))
-#        input_state = torch.cat((torch.cat((torch.cat((emb.flatten(),
-#                                                       torch.as_tensor(visits).float())),
-#                                            torch.as_tensor(self.moves).float())),
-#                                 torch.tensor([int(curr_x), int(curr_z)]).float()))
         input_state = torch.cat((emb.flatten(), self.moves))
-
-
-#        print("Input State: " + str(input_state))
-#        print(len(input_state))
-        #input("Enter...")
-#        print(emb_np)
-#        print()
-#
-#
-#        state = np.array([int(xpos),
-#                          int(zpos),
-#                          int(visit_code)])
-#
-#        state.append(emb_np)
-
-        # update Q values        
-#        state = torch.from_numpy(state).float().unsqueeze(0)#.to(self.device)
-#        print(state)
-#        print()
-
-#        print(self.visited)
-#        for surrounding in [(-1,-1), (-1, 0), (-1, 1), (0, -1), (0, 0), (0, 1), (1, -1), (1, 0), (1,1)]:
-#            if (int(xpos) + surrounding[0], int(zpos) + surrounding[1]) not in self.visited:
-#                visits.append(0.)
-#            else:
-#                visits.append(1.)
-
-#        print(visits)
-#        visit_tensor = torch.as_tensor(visits).unsqueeze(0)
-#        print(visit_tensor)
-#        print(input_state)
-#        print(torch.cat((input_state, visit_tensor)))
-#        print(torch.cat((input_state, visit_tensor)).t())
-#        print(torch.cat((input_state, visit_tensor)).t().unsqueeze(0))
-#        input_state = torch.cat((input_state, visit_tensor)).t().unsqueeze(0)
-
-#        state_actions = torch.as_tensor(self.recent_actions, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
-#        print(state_actions.size())
-#        print(input_state.size())
-#        print(torch.cat((input_state, state_actions), dim=1))
-#        print(torch.cat((input_state, state_actions), dim=1).t())
-#        input_state = torch.cat((input_state, state_actions), dim=1)
-#        print(input_state)
 
 
         self.policy_model.eval()
@@ -432,68 +286,27 @@ class deepQAgent(object):
 
         self.drawQ( curr_x = int(obs[u'XPos']), curr_y = int(obs[u'ZPos']) , action_values = action_values)
 
-#        print(state)
-#        print(action_values)
-
-
         # Epsilon-greedy action selection
-#        print(action_values)
-#        print(action_values.max(1))
-#        print(action_values.max(1)[0].max(1)[1])
-#        print(action_values.max(1)[0].max(1)[1].view(1, 1))
-#        print(np.average(action_values.cpu().data.numpy(),axis=1))
-#        print(np.argmax(np.average(action_values.cpu().data.numpy(),axis=1)))
-
         _i = 0
-#        print("Test Knowledge: "+str(test_knowledge))
-#        print("Vision: "+"\n"+
-#              str(vision[0:3])+"\n"+
-#              str(vision[3:6])+"\n"+
-#              str(vision[6:9])+"\n")
-#        print("Action values: "+str(action_values))
         while True:
             if (_i < 1 and ((random.random() > self.epsilon) or test_knowledge)):
                 # t.max(1) will return largest column value of each row.
                 # second column on max result is index of where max element was
                 # found, so we pick action with the larger expected reward.
-#                print("Optimal action: ", end="")
                 action = action_values.max(0)[0].max(0)[0].view(1, 1)
-#                print(str(action)+", ", end="")
                 action_list = list(action_values)
                 action = torch.tensor([[action_list.index(action)]])
-#                action = np.average(action_values.cpu().data.numpy(),axis=1)
-#                action = np.argmax(action_values.cpu().data.numpy())
             else:
-#                print("Random action: ", end="")
                 action = torch.tensor([[random.randrange(self.action_size)]])
-#                action = random.choice(np.arange(self.action_size))
-#            print()
-#            print(action,self.actions[action])
-#            print(vision)
-#            print()
             if( (action == 0 and vision[1] != 'gold_block') or (action == 1 and vision[7] != 'gold_block') or
                 (action == 2 and vision[3] != 'gold_block') or (action == 3 and vision[5] != 'gold_block') ):
                 break
             else:
                 print("abort (wall)")
                 _i += 1
-
-#        self.moves.append(action)
-        #self.moves.append(int(curr_x))
-        #self.moves.append(int(curr_z))
+                
         self.moves_temp.extend(encode)
         self.moves = self.one_hot(torch.tensor(self.moves_temp), len(self.block_list)).flatten()
-
-
-#        self.recent_actions.append(action)
-#        print(self.recent_actions)
-#        print(input_state)
-#        print(np.argmax(action_values.cpu().data.numpy()))
-#        print(action)
-#        print(np.average(action_values.cpu().data.numpy(),axis=1))
-#        print(np.argmax(np.average(action_values.cpu().data.numpy(),axis=1)))
-#        print(self.actions)
-#        pr int(prev)
 
         # send the selected action
         agent_host.sendCommand(self.actions[action])
@@ -505,19 +318,12 @@ class deepQAgent(object):
             obs = json.loads(obs_text)  # most recent observation
         else:
             obs = old_obs
-#        print()
-#        print("after command")
-#        print(obs)
         self.logger.debug(obs)
         if not u'XPos' in obs or not u'ZPos' in obs:
             self.logger.error("Incomplete observation received: %s" % obs_text)
             return 0
         current_s = "%d,%d" % (int(obs[u'XPos']), int(obs[u'ZPos']))
         self.logger.debug("State: %s (x = %.2f, z = %.2f)" % (current_s, float(obs[u'XPos']), float(obs[u'ZPos'])))
-
-#        print(next_state)
-#        print()
-#        print()
 
         return input_state, action
 
@@ -529,29 +335,13 @@ class deepQAgent(object):
         tol = 0.01
 
         self.drawQ_reward_history = defaultdict(str)
-        #print(self.drawQ_map)
-        #input("Enter...")
-        #self.drawQ_map = defaultdict(str)
-
-#        self.prev_s = None
-#        self.prev_a = None
         self.state = None
         self.action = None
         self.next_state = None
         
-#        self.visited = set() # always have starting position set to visited
-#        self.visited.add((4, 1))
-        #self.moves = deque(maxlen=self.movement_memory)
-        #self.moves_temp = list()
         for i in range(self.movement_memory*9): #9 for vision radius
-#            self.moves.append(-1)
-            #self.moves.append(4)
-            #self.moves.append(1)
             self.moves_temp.append(0)
-#        print(self.moves_temp)
         self.moves = self.one_hot(torch.tensor(self.moves_temp), len(self.block_list)).flatten()
-#        print("self.moves = " + str(self.moves))
-#        print(len(self.moves))
         # wait for a valid observation
         world_state = agent_host.peekWorldState()
         while world_state.is_mission_running and all(e.text == '{}' for e in world_state.observations):
@@ -585,14 +375,6 @@ class deepQAgent(object):
             image.save('rep_' + str(self.rep).zfill(3) + '_saved_frame_' + str(iFrame).zfill(4) + '.png')
 
         # take first action
-#        print(pre_state)
-#        print(state)
-
-#        obs = json.loads(world_state.observations[-1].text)
-#        print("after first action")
-#        print("curr_location: ", obs[u'XPos'], obs[u'ZPos'])
-
-
         require_move = True
         check_expected_position = True
 
@@ -677,79 +459,9 @@ class deepQAgent(object):
 
                 vision = obs['vision']
                 encode = encode_observations(vision)
-                #encode = list()
-                #for block in vision:
-                #    encode.append(self.block_list.index(block))
-#                input_state = self.one_hot(torch.tensor(encode), len(encode)).flatten()       .float()
-#                print(input_state)
-
-#                visits = list()
-##                print(self.visited)
-##                print(self.visited)
-#                if (int(curr_x), int(curr_z)) not in self.visited:
-#                    discovery_reward = 0
-#                    self.visited.add((int(curr_x), int(curr_z)))
-#                else:
-#                    discovery_reward = 0
-##                print(self.visited)
-#                for surrounding in [(-1,-1), (-1, 0), (-1, 1), (0, -1), (0, 0), (0, 1), (1, -1), (1, 0), (1,1)]:
-#                    if (int(curr_x) + surrounding[0], int(curr_z) + surrounding[1]) not in self.visited:
-#                        visits.append(0)
-#                    else: 
-#                        visits.append(1)
 
                 emb = self.one_hot(torch.tensor(encode), len(self.block_list))
-#                print(emb)
-#                next_state = emb.flatten()
-#                print(next_state)
-#                next_state = torch.cat((emb.flatten(), torch.as_tensor(visits).float()))
-#                next_state = torch.cat((torch.cat((torch.cat((emb.flatten(),
-#                                                              torch.as_tensor(visits).float())),
-#                                                   torch.as_tensor(self.moves).float())),
-#                                        torch.tensor([int(curr_x), int(curr_z)]).float()))
                 next_state = torch.cat((emb.flatten(), self.moves))
-#                print(next_state)
-#                state_info = list()
-#                state_info.append(vision)
-#                encode = list()
-#                for block in vision:
-#                    encode.append(self.block_list.index(block))
-#                print(self.block_list)
-#                print(encode)
-#                print(self.one_hot(torch.tensor(encode), len(self.block_list)).float())
-#                next_state = self.one_hot(torch.tensor(encode), len(self.block_list)).t().float()
-
-
-#                visits = list()
-##                print(self.visited)
-#                if (int(curr_x), int(curr_z)) not in self.visited:
-#                    discovery_reward = 5
-#                    self.visited.add((int(curr_x), int(curr_z)))
-#                else:
-#                    discovery_reward = 0
-##                print(self.visited)
-#                for surrounding in [(-1,-1), (-1, 0), (-1, 1), (0, -1), (0, 0), (0, 1), (1, -1), (1, 0), (1,1)]:
-#                    if (int(curr_x) + surrounding[0], int(curr_z) + surrounding[1]) not in self.visited:
-#                        visits.append(0)
-#                    else:
-#                        visits.append(1)
-#
-#                state_info.append(visits)
-#
-#                print(state_info)
-
-#                visit_tensor = torch.as_tensor(visits).unsqueeze(0)
-#                next_state = torch.cat((next_state, visit_tensor)).t().unsqueeze(0)
-#                print(state)
-#                print(action)
-#                print(current_r)
-#                current_r += discovery_reward
-#                print(current_r)
-#                print(next_state)
-#
-#                if count == 10:
-#                    print(prev)
-
                 prev_x = curr_x
                 prev_z = curr_z
 
@@ -758,7 +470,6 @@ class deepQAgent(object):
                 total_reward += current_r
 
                 agent.step(state, action, total_reward, next_state)
-                #agent.step(state, action, current_r, next_state)
 
                 # save the total reward in the drawQ_reward_history dictionary
                 # for drawQ
@@ -768,28 +479,14 @@ class deepQAgent(object):
                 # Here, we can replace our current spot with a normal block
                 # to indicate that the item has been picked up.
 #                print(current_r)
-                # if current_r == 99:  # Reward of grass is 100 - 1
                 if obs[u'vision'][floor(len(obs[u'vision']) / 2)] == "grass":
-                    # my_mission.drawBlock(int(obs[u'XPos']),45,int(obs[u'ZPos']),"sandstone")
-                    #temp = self.prev_s.split(",")
                     temp = prev_x, prev_z
-                    # print(temp)
-                    # print("grass detected via reward!")
                     result = "chat /fill " + str(temp[0]) + " 45 " + str(temp[1]) + " " + str(temp[0]) + " 45 " + str(
                         temp[1]) \
                              + " minecraft:sandstone 0 replace minecraft:grass"
-                    # print(result)
-                    # agent_host.sendCommand('chat /kill @a')
                     agent_host.sendCommand(result)
-                    # agent_host.sendCommand("turn 1")
-                    # input()
 
                 ### END ###
-
-
-#                print("current reward for this step: ", current_r)
-#                print("total reward for this step: ", total_reward)
-#                time.sleep(0.5)
 
                 current_r = 0
 
@@ -801,20 +498,6 @@ class deepQAgent(object):
         self.logger.debug("Final reward: %d" % current_r)
         print("Final reward: %d" % current_r)
         total_reward += current_r
-
-        #state = np.array([int(obs[u'XPos']),
-        #                  int(obs[u'ZPos'])])
-
-        # update Q values
-        #state = torch.from_numpy(state).float().unsqueeze(0)#.to(self.device)
-        #self.policy_model.eval()
-        #self.policy_model.train()
-
-        # wait for a frame to arrive after that
-        #num_frames_seen = world_state.number_of_video_frames_since_last_state
-        #while world_state.is_mission_running and world_state.number_of_video_frames_since_last_state == num_frames_seen:
-        #    world_state = agent_host.peekWorldState()
-        #world_state = agent_host.getWorldState()
 
         x = obs[u'XPos']
         z = obs[u'ZPos']
@@ -832,7 +515,6 @@ class deepQAgent(object):
         obs[u'XPos'] = x
         obs[u'ZPos'] = z
         state, action = self.act(world_state, agent_host, old_obs=obs)
-        #current_r = sum(r.getValue() for r in world_state.rewards)
         agent.step(state, action, total_reward, state)
         self.drawQ_reward_history[str(obs[u'XPos']) + "," + str(obs[u'ZPos'])] = total_reward
 
@@ -875,17 +557,11 @@ class deepQAgent(object):
         action_radius = 0.1
         curr_radius = 0.02
         action_positions = [ ( 0.5, 1-action_inset ), ( 0.5, action_inset ), ( 1-action_inset, 0.5 ), ( action_inset, 0.5 ) ]
-        #print(self.drawQ_reward_history.keys())
         #input("...")
         # (NSWE to match action order)
         for x in range(world_x):
             for y in range(world_y):
-                #print(x)
-                #print(y)
-                #print(self.drawQ_map[str(x)+","+str(y)])
-                #input([i for i in self.drawQ_map.keys()])
                 block_color = self.drawQ_map[str(x)+","+str(y)] if self.drawQ_map[str(x)+","+str(y)] != "" else "#000"
-                #print(block_color)
                 self.canvas.create_rectangle((world_x - 1 - x) * scale, (world_y - 1 - y) * scale,
                                              (world_x - 1 - x + 1) * scale, (world_y - 1 - y + 1) * scale,
                                              outline="#fff",
@@ -1218,8 +894,6 @@ def encode_observations(vision:list=list()):
     result = []
     for item in vision:
         result.append(encode_dict[item])
-#    print(str(vision[0:3])+"\n"+str(vision[3:6])+"\n"+str(vision[6:9]))
-#    print(str(result[0:3])+"\n"+str(result[3:6])+"\n"+str(result[6:9]))
     return result
 
 
@@ -1286,15 +960,6 @@ try:
 
         # -- set up the agent -- #
         actionSet = ["movenorth 1", "movesouth 1", "movewest 1", "moveeast 1"]
-
-    #    agent = TabQAgent(
-    #        actions=actionSet,
-    #        epsilon=agent_host.getFloatArgument('epsilon'),
-    #        alpha=agent_host.getFloatArgument('alpha'),
-    #        gamma=agent_host.getFloatArgument('gamma'),
-    #        debug=agent_host.receivedArgument("debug"),
-    #        canvas=canvas,
-    #        root=root)
 
         agent = deepQAgent( actions=actionSet,
                             learning_rate=agent_host.getFloatArgument('alpha'),
