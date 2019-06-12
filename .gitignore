@@ -3,4 +3,7 @@
 .idea/*
 mission_records/
 video/
+video2/
+target_model.pth
+policy_model.pth
 video_to_plot.csv
