@@ -1335,7 +1335,7 @@ try:
             test_knowledge = True if i % 5 == 0 else False
 
             print("\nMap %d - Mission %d of %d:" % (imap, i, num_repeats))
-            root.wm_title("Q-table: "+"Map %d - Mission %d of %d %s:" % (imap, i, num_repeats,
+            root.wm_title("Mini-map "+"#%d/%d %s:" % (i, num_repeats,
                                                                          "(TEST POLICY)" if test_knowledge else ""))
             my_mission_record = malmoutils.get_default_recording_object(agent_host,
                                                                         "./save_%s-map%d-rep%d" % (expID, imap, i))
