@@ -18,12 +18,10 @@ Have you ever wanted to be the best stealth dungeon master without knowing the r
 Our goal in this project is to create an agent that will train to solve a dungeon by avoiding conflict rather than with conflict. These dungeons will have various features such as obstacles, lava, monsters, small rewards along the way, giant treasure at the end of the path, and much more. The agent's goal is to minimize the amount of travel he agent has to use while maximizing the number of rewards he gets along the way. The agent is a modern pacifist Indiana Jones.
 
 ## Video
-Click below to view the video...
-
-[![IMAGE ALT TEXT HERE](http://img.youtube.com/vi/vYLZZKRD03M/0.jpg)](http://www.youtube.com/watch?v=vYLZZKRD03M)
+<iframe width="100%" height="400" src="https://www.youtube.com/embed/YTee4sioI2k" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
 ## Photos
-See [Status Report](status.html)!
+See [Status Report](status.html) and [Final Report](final.html)!
 
 <!--
 What's Markdown (`.md`)?
