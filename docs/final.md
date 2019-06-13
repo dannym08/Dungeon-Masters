@@ -13,7 +13,7 @@ Our goal in this project is to create an agent that will train to solve a dungeo
 
 Our goal is to create an agent that can solve the dangerous dungeons that lie ahead. These dungeons feature lava, walls, and enemies that it has to sneak around and a bright, blue diamond in the end hoisted an a very rare and expensive lapiz block. 
 
-<img src="images/gameplay.png" alt="Gameplay" width="100%" />
+<img src="images/gameplay.png" alt="Gameplay" width="400px" />
 
 ## Approaches
 Our project was divided into two stages: tabular q-learning and deep q-learning(dqn).
@@ -38,7 +38,7 @@ Secondly, the output layer has 4 nodes to correspond to each of the 4 possible a
 
 Lastly, the hidden layer has 182 nodes because we just took the average number of nodes between the input and output layer to determine the number of nodes we need.
 
-<img src="images/definition.png" alt="Definition of DQN PyTorch" width="100%" />
+<img src="images/definition.png" alt="Definition of DQN PyTorch" width="400px" />
 
 _Above: The source code of the neural network class that was used by PyTorch._
 
@@ -48,7 +48,7 @@ We use a double neural net during the DQN: a policy and target model. The policy
 
 To make sure that the agent is learning based on his surroundings, we made the enemies spawn the random locations at the beginning of every run. We also had the agent have a decaying epsilon. On the very first run, the agent has an epsilon of 1.0 so it will always make a random move. As the agent makes more runs, we decay the epsilon at the rate of 0.001%, i.e. we multiply epsilon by 0.999. This will gradually decrease epsilon so the more runs that have passed by, the less likely the agent will make a random move, and instead make the optimal move. However, we also do not let the epsilon to drop pas 0.001. Once is has dropped passed that threshold, epsilon will be held constant there after.
 
-<img src="images/dynamic.png" alt="Definition of Dynamic XML Generation" width="100%" />
+<img src="images/dynamic.png" alt="Definition of Dynamic XML Generation" width="400px" />
 
 _Above: The high-level source code of the XML random generation of various map features._
 
@@ -60,7 +60,7 @@ Our agent can be observed in two ways:
 1. A mini-map, which shows the position of the agent and its visited block in the world as well as the position of the special blocks described in the rewards table below in the “Rewards System section; and the resulting reward of going in one of four discrete directions, the reward being denoted by text and the most optimal action by a colored circle.
 2. The game screen/canvas, which shows the agent traversing a physical representation of the world. 
 
-<img src="images/map.png" alt="Minimap" width="100%" />
+<img src="images/map.png" alt="Minimap" width="400px" />
 
 _Above: The mini-map used to assist in the observation of the agent's progress visually._
 
@@ -75,8 +75,8 @@ Using a Python program to read this data, we conceived a simple graph, where:
 2. _x_ is the number of iterations, and _y_ is the resulting reward at the end of the mission.
 Inferring from the graphs, one can notice the steady convergence in the number of steps as deep-Q learning decides to take the best-policy path to the goal over time. Also observe the cluster of positive rewards consistently appearing over iterations as the best-policy path is realized over time.
 
-<img src="images/Final/reward.png" alt="Reward graph" width="100%" />
-<img src="images/Final/steps.png" alt="Steps graph" width="100%" />
+<img src="images/Final/reward.png" alt="Reward graph" width="400px" />
+<img src="images/Final/steps.png" alt="Steps graph" width="400px" />
 
 
 #### Data Parser Program
@@ -86,7 +86,7 @@ As previously described, Malmo saves .tgz files into a folder, in which we can t
 
 The module also takes an optional argument that lets us only save specific iterations. This allows us to save only iterations that have the best policy, eliminating the noise from the exploratory phases of deep-q learning.
 
-<img src="images/tgz.png" alt="TGZ contents" width="100%" />
+<img src="images/tgz.png" alt="TGZ contents" width="400px" />
 
 #### Rewards System
 Finally, our rewards system for deep-q learning looks as follows:
